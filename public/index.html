@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LariAcessórios | Premium Ecosystem</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,200,0,0" />
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #ffffff; }
+        .font-luxury { font-family: 'Bodoni Moda', serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Cores do Logotipo e Paleta da Marca */
+        .text-logo-dark { color: #2d2d2d; }
+        .text-gold { color: #c5a880; }
+        .bg-gold { background-color: #b39266; }
+        .bg-gold-hover:hover { background-color: #9e7f55; }
+
+        /* GRADIENTE DOURADO REALÍSTICO (Fiel à imagem 655700332_18072862505548256_8173608347227276860_n.jpg) */
+        .gold-gradient-line {
+            background: linear-gradient(90deg, #967849 0%, #d9c49e 30%, #f3e7cb 50%, #d9c49e 70%, #967849 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* EFEITO DE BRILHO REFINADO (SHIMMER EFFECT) */
+        .gold-gradient-line::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -150%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg);
+            animation: shineLine 6s infinite ease-in-out;
+        }
+
+        .gold-heart-glow {
+            fill: url(#gold-metallic);
+            position: relative;
+        }
+
+        /* Animação do Brilho Passante */
+        @keyframes shineLine {
+            0% { left: -150%; }
+            15% { left: 150%; }
+            100% { left: 150%; }
+        }
+
+        /* Pulsação de brilho suave no coração dourado */
+        @keyframes heartGlow {
+            0%, 100% { filter: drop-shadow(0 0 0px rgba(243, 231, 203, 0)); }
+            50% { filter: drop-shadow(0 0 5px rgba(217, 196, 158, 0.8)); }
+        }
+        .animate-heart {
+            animation: heartGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-neutral-800 antialiased min-h-screen">
+
+    <!-- DEFINIÇÃO DO GRADIENTE METÁLICO PARA O CORAÇÃO SVG -->
+    <svg class="absolute w-0 h-0" width="0" height="0">
+        <defs>
+            <linearGradient id="gold-metallic" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#967849" />
+                <stop offset="30%" stop-color="#d9c49e" />
+                <stop offset="50%" stop-color="#f3e7cb" />
+                <stop offset="70%" stop-color="#d9c49e" />
+                <stop offset="100%" stop-color="#967849" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <!-- ========================================== -->
+    <!-- INTERFACE 1: VITRINE PÚBLICA DO CLIENTE     -->
+    <!-- ========================================== -->
+    <div id="view-client" class="block pb-24 md:pb-6">
+
+        <!-- HEADER IDENTÊNTICO AO LOGO SOLICITADO -->
+        <header class="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-40 w-full px-4 md:px-8 py-4">
+            <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+
+                <!-- LOGO EXATO BASEADO NA IMAGEM ENVIADA -->
+                <div class="flex flex-col items-center select-none text-center md:text-left md:items-start">
+                    <div class="relative flex items-end">
+                        <span class="font-luxury text-4xl md:text-5xl font-semibold tracking-wide text-logo-dark leading-none">Lari</span>
+                        <div class="absolute -right-3 top-[-8px] md:top-[-11px] w-6 h-6 animate-heart">
+                            <svg viewBox="0 0 24 24" class="w-full h-full">
+                                <path class="gold-heart-glow" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="#967849" stroke-width="0.5"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="gold-gradient-line w-44 md:w-52 h-[2px] mt-1.5 mb-1"></div>
+                    <span class="text-neutral-700 font-light tracking-[0.22em] uppercase text-[13px] md:text-[15px] pl-1 leading-none">Acessórios</span>
+                </div>
+
+                <!-- Busca integrada Desktop -->
+                <div class="hidden md:block w-80 lg:w-96 relative">
+                    <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xl">search</span>
+                    <input type="text" id="search-input-pc" oninput="syncSearch(this.value)" placeholder="Buscar relógios, cordões, bolsas..."
+                           class="w-full pl-11 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-black font-light text-sm">
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:flex items-center gap-1.5 text-neutral-500 text-xs font-light bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-full">
+                        <span class="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-pulse"></span>
+                        Catálogo Online
+                    </div>
+                    <button onclick="switchView('admin')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-500 hover:text-black border border-neutral-200 hover:border-black px-3 py-1.5 rounded-full transition-all duration-300">
+                        <span class="material-symbols-rounded text-sm text-gold">lock</span>
+                        Painel Lari
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTEÚDO VITRINE -->
+        <div class="max-w-[1600px] mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <aside class="lg:col-span-1 space-y-6 lg:sticky lg:top-28">
+                <div class="relative md:hidden">
+                    <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xl">search</span>
+                    <input type="text" id="search-input-mobile" oninput="syncSearch(this.value)" placeholder="Buscar na LariAcessórios..."
+                           class="w-full pl-11 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-black text-sm">
+                </div>
+                <div>
+                    <h3 class="hidden lg:block text-xs tracking-widest text-neutral-400 uppercase font-bold mb-4">Coleções</h3>
+                    <div class="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <button onclick="filterCategory('todos')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left">Todos os Produtos</button>
+                        <button onclick="filterCategory('relogios')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left">🕰️ Relógios</button>
+                        <button onclick="filterCategory('cordoes')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left">✨ Cordões</button>
+                        <button onclick="filterCategory('bolsas')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left">👜 Bolsas Premium</button>
+                    </div>
+                </div>
+            </aside>
+            <main class="lg:col-span-3 space-y-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6" id="products-grid"></div>
+            </main>
+        </div>
+
+        <!-- MOBILE BOTTOM BAR -->
+        <div id="cart-bar-mobile" class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-neutral-100 p-4 transform translate-y-full transition-transform duration-300 z-50">
+            <button onclick="toggleCheckoutModal()" class="w-full bg-black text-white font-bold py-4 px-5 rounded-xl flex items-center justify-between tracking-wider text-xs uppercase">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-xl text-gold">shopping_bag</span>
+                    <span id="cart-count-mobile" class="bg-white text-black px-2 py-0.5 rounded-md text-[10px] font-bold">0</span>
+                    <span>Ver Sacola</span>
+                </div>
+                <span id="cart-total-mobile" class="text-sm font-bold">R$ 0,00</span>
+            </button>
+        </div>
+
+        <!-- PC FLOATING CART BUTTON -->
+        <button id="cart-btn-pc" onclick="toggleCheckoutModal()" class="hidden md:flex fixed bottom-8 right-8 bg-black text-white p-4 rounded-full shadow-2xl items-center gap-2 hover:scale-105 active:scale-95 transition-all z-40">
+            <span class="material-symbols-rounded text-gold">shopping_bag</span>
+            <span id="cart-count-pc" class="bg-white text-black text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- INTERFACE 2: PAINEL ADMINISTRATIVO LUXO    -->
+    <!-- ========================================== -->
+    <div id="view-admin" class="hidden min-h-screen bg-neutral-50">
+        <!-- HEADER DA GESTÃO -->
+        <header class="bg-black text-white py-5 px-4 md:px-8 sticky top-0 z-40">
+            <div class="max-w-[1600px] mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <h2 class="font-luxury text-xl md:text-2xl tracking-widest text-white uppercase">LariAcessórios <span class="text-xs font-sans text-gold font-light tracking-normal ml-2">Módulo Management</span></h2>
+                </div>
+                <button onclick="switchView('client')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-400 hover:text-white border border-neutral-800 px-4 py-2 rounded-lg transition-colors">
+                    <span class="material-symbols-rounded text-sm">arrow_back</span> Voltar à Vitrine
+                </button>
+            </div>
+        </header>
+
+        <div class="max-w-[1600px] mx-auto px-4 md:px-8 py-8 grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <!-- ESQUERDA: DASHBOARD FINO & FORMULÁRIO -->
+            <div class="xl:col-span-1 space-y-8">
+                <!-- METRICAS DE LUXO -->
+                <div class="bg-white border border-neutral-200/60 p-6 rounded-2xl shadow-sm space-y-6">
+                    <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                        <h3 class="text-xs tracking-widest text-neutral-400 uppercase font-bold">Desempenho da Marca</h3>
+                        <span class="material-symbols-rounded text-gold">verified_user</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Faturamento total</span>
+                            <span class="font-luxury text-xl font-bold text-black" id="dash-faturamento">R$ 4.890,00</span>
+                        </div>
+                        <div class="p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Pedidos Gerados</span>
+                            <span class="font-luxury text-xl font-bold text-black" id="dash-pedidos">18</span>
+                        </div>
+                    </div>
+
+                    <!-- FILTRAGEM DE RELATÓRIOS -->
+                    <div class="pt-2 space-y-3">
+                        <label class="text-[10px] tracking-widest text-neutral-400 uppercase font-bold block">Filtro de Relatórios Inteligente</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="number" id="filter-dia" placeholder="Dia (DD)" class="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:border-black">
+                            <select id="filter-mes" class="w-full px-2 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:border-black">
+                                <option value="">Mês</option>
+                                <option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option>
+                                <option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option>
+                                <option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option>
+                                <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+                            </select>
+                            <input type="number" id="filter-ano" placeholder="Ano (AAAA)" value="2026" class="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:border-black">
+                        </div>
+                        <button onclick="filtrarRelatorio()" class="w-full bg-black text-white text-[10px] font-bold uppercase tracking-widest py-3 rounded-xl hover:bg-neutral-900 transition-colors">
+                            Gerar Relatório Filtrado
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FORMULÁRIO DE INSERÇÃO/EDIÇÃO COM FILE UPLOAD URGENTE -->
+                <div class="bg-white border border-neutral-200/60 p-6 rounded-2xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                        <h3 class="text-xs tracking-widest text-neutral-400 uppercase font-bold" id="form-title">Curar Novo Acessório</h3>
+                        <span class="text-gold material-symbols-rounded text-lg">auto_awesome</span>
+                    </div>
+                    <input type="hidden" id="prod-id">
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-neutral-400 uppercase font-semibold">Designação do Produto</label>
+                        <input type="text" id="prod-nome" placeholder="Ex: Bolsa Crossbody Black Diamond" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-black font-light">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-neutral-400 uppercase font-semibold">Preço de Venda (R$)</label>
+                            <input type="number" step="0.01" id="prod-preco" placeholder="0.00" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-black font-light">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-neutral-400 uppercase font-semibold">Coleção/Categoria</label>
+                            <select id="prod-categoria" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-black font-light">
+                                <option value="relogios">Relógios</option>
+                                <option value="cordoes">Cordões</option>
+                                <option value="bolsas">Bolsas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- REVOLUÇÃO: DRAG & DROP / FILE UPLOAD BOX PREMIUM -->
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-neutral-400 uppercase font-semibold">Fotografia do Acessório</label>
+                        <div class="relative group w-full border-2 border-dashed border-neutral-200 hover:border-black rounded-xl p-4 transition-all bg-neutral-50 text-center cursor-pointer">
+                            <input type="file" id="prod-file" accept="image/*" onchange="processImageFile(this)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div class="space-y-1" id="upload-placeholder-view">
+                                <span class="material-symbols-rounded text-neutral-400 group-hover:text-gold text-2xl transition-colors">add_photo_alternate</span>
+                                <p class="text-[11px] font-medium text-neutral-700">Clique para selecionar ou solte a imagem aqui</p>
+                                <p class="text-[9px] text-neutral-400 uppercase tracking-wider">Formatos suportados: JPG, PNG, WEBP</p>
+                            </div>
+                            <!-- Miniatura de Pré-visualização Oculta -->
+                            <div id="upload-preview-container" class="hidden flex-col items-center gap-1.5">
+                                <img id="upload-preview-img" src="" class="w-16 h-16 object-cover rounded-md border border-neutral-200 shadow-sm">
+                                <span class="text-[9px] text-neutral-400 uppercase bg-neutral-200/60 px-2 py-0.5 rounded-full font-bold">Imagem Carregada com sucesso</span>
+                            </div>
+                        </div>
+                        <!-- Guarda o estado Base64 de forma invisível -->
+                        <input type="hidden" id="prod-foto-base64">
+                    </div>
+
+                    <div class="pt-2 flex gap-2">
+                        <button onclick="salvarProduto()" class="flex-1 bg-gold hover:bg-gold-hover text-white text-xs font-bold uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-md">
+                            Salvar Coleção
+                        </button>
+                        <button onclick="limparFormulario()" id="btn-cancelar" class="hidden bg-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-widest py-3.5 px-4 rounded-xl transition-all">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DIREITA: LISTAGEM DE CONTROLE -->
+            <div class="xl:col-span-2 bg-white border border-neutral-200/60 p-6 rounded-2xl shadow-sm">
+                <h3 class="text-xs tracking-widest text-neutral-400 uppercase font-bold mb-6 border-b border-neutral-100 pb-3">Gerenciamento de Acervo Global</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-neutral-200 text-neutral-400 tracking-wider uppercase text-[10px]">
+                                <th class="pb-3 font-semibold">Item</th>
+                                <th class="pb-3 font-semibold">Coleção</th>
+                                <th class="pb-3 font-semibold">Preço</th>
+                                <th class="pb-3 font-semibold text-center">Exibir Vitrine</th>
+                                <th class="pb-3 font-semibold text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body" class="divide-y divide-neutral-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CHECKOUT -->
+    <div id="checkout-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center md:justify-end">
+        <div class="bg-white border-t md:border-t-0 md:border-l border-neutral-200 w-full max-w-md h-[90vh] md:h-screen rounded-t-2xl md:rounded-t-none p-6 space-y-6 overflow-y-auto shadow-2xl flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-4">
+                    <h2 class="font-luxury text-xl tracking-wider text-black uppercase">Sua Sacola</h2>
+                    <button onclick="toggleCheckoutModal()" class="p-1 rounded-full bg-neutral-100 text-neutral-500 hover:text-black transition-colors">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div id="cart-items-list" class="space-y-4 divide-y divide-neutral-100 max-h-[30vh] overflow-y-auto pr-1 mt-4"></div>
+                <div class="space-y-3 pt-6">
+                    <h4 class="text-[10px] tracking-widest text-neutral-400 uppercase font-bold">Informações de Envio</h4>
+                    <input type="text" id="client-name" placeholder="Seu nome completo" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light">
+                    <input type="text" id="client-phone" placeholder="WhatsApp para contato" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light">
+                    <textarea id="client-address" placeholder="Endereço de Entrega ou Retirada" rows="2" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light"></textarea>
+                </div>
+            </div>
+            <div class="border-t border-neutral-100 pt-4 bg-white sticky bottom-0">
+                <div class="flex justify-between items-center mb-4 text-sm font-semibold">
+                    <span>Total do Pedido:</span>
+                    <span id="modal-total-value" class="text-lg font-bold text-black">R$ 0,00</span>
+                </div>
+                <button onclick="submitOrder()" class="w-full bg-black hover:bg-neutral-900 text-white font-bold py-4 rounded-xl tracking-widest text-xs uppercase transition-all shadow-lg">Enviar via WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENGINE LOGIC -->
+    <script>
+        let datasetProducts = [
+            { id_produto: "a1", nome: "Relógio Minimalist Silver Chrono", preco: 289.90, categoria: "relogios", foto: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60", visivel: true },
+            { id_produto: "a2", nome: "Relógio Gold All Black Masculino", preco: 349.00, categoria: "relogios", foto: "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?w=500&auto=format&fit=crop&q=60", visivel: true },
+            { id_produto: "a3", nome: "Cordão Veneziana Prata 925 Slim", preco: 119.90, categoria: "cordoes", foto: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500&auto=format&fit=crop&q=60", visivel: true },
+            { id_produto: "a4", nome: "Cordão Elos de Ouro 18k Plated", preco: 189.00, categoria: "cordoes", foto: "https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?w=500&auto=format&fit=crop&q=60", visivel: true },
+            { id_produto: "a5", nome: "Bolsa Tote Couro Eco Texturizada", preco: 240.00, categoria: "bolsas", foto: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&auto=format&fit=crop&q=60", visivel: true },
+            { id_produto: "a6", nome: "Bolsa Crossbody Black Diamond Clasp", preco: 198.50, categoria: "bolsas", foto: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&auto=format&fit=crop&q=60", visivel: true }
+        ];
+
+        let cart = {};
+        let currentCategory = 'todos';
+        let currentSearchGlobal = '';
+
+        // PROCESSADOR ASSÍNCRONO DE ARQUIVOS LOCAIS (Leitor de Arquivos do Usuário)
+        function processImageFile(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Content = e.target.result;
+                    // Injeta a string de imagem no campo oculto
+                    document.getElementById('prod-foto-base64').value = base64Content;
+
+                    // Altera estados visuais de Preview dentro do Box
+                    document.getElementById('upload-placeholder-view').classList.add('hidden');
+                    const previewContainer = document.getElementById('upload-preview-container');
+                    previewContainer.classList.remove('hidden');
+                    previewContainer.classList.add('flex');
+                    document.getElementById('upload-preview-img').src = base64Content;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function switchView(target) {
+            if(target === 'admin') {
+                document.getElementById('view-client').classList.replace('block', 'hidden');
+                document.getElementById('view-admin').classList.replace('hidden', 'block');
+                renderAdminTable();
+            } else {
+                document.getElementById('view-admin').classList.replace('block', 'hidden');
+                document.getElementById('view-client').classList.replace('hidden', 'block');
+                renderClientProducts(currentSearchGlobal);
+            }
+            window.scrollTo(0,0);
+        }
+
+        function renderClientProducts(filterText = '') {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = '';
+
+            const filtered = datasetProducts.filter(p => {
+                const matchesCategory = currentCategory === 'todos' || p.categoria === currentCategory;
+                const matchesSearch = p.nome.toLowerCase().includes(filterText.toLowerCase());
+                return matchesCategory && matchesSearch && p.visivel;
+            });
+
+            if(filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-16 text-neutral-400 text-xs tracking-wider uppercase">Nenhum acessório nesta curadoria.</div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const qty = cart[p.id_produto] || 0;
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl border border-neutral-100 overflow-hidden flex flex-col justify-between group transition-all duration-300 hover:shadow-xl hover:shadow-black/5";
+                card.innerHTML = `
+                    <div class="relative overflow-hidden aspect-square bg-neutral-50">
+                        <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover grayscale opacity-90 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 scale-100 group-hover:scale-105">
+                        ${qty > 0 ? `<div class="absolute top-2 right-2 bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">${qty} na sacola</div>` : ''}
+                    </div>
+                    <div class="p-3.5 md:p-5 flex flex-col flex-grow justify-between">
+                        <div>
+                            <span class="text-[9px] uppercase tracking-widest font-bold text-neutral-400">${p.categoria}</span>
+                            <h4 class="font-light text-neutral-800 text-xs md:text-sm tracking-wide mt-1 line-clamp-2 min-h-[32px] md:min-h-[40px] group-hover:text-black transition-colors">${p.nome}</h4>
+                        </div>
+                        <div class="mt-4 flex items-center justify-between">
+                            <span class="font-semibold text-black text-sm md:text-base">R$ ${p.preco.toFixed(2).replace('.', ',')}</span>
+                            ${qty > 0 ? `
+                                <div class="flex items-center bg-black text-white rounded-lg text-xs font-bold overflow-hidden">
+                                    <button onclick="updateCart('${p.id_produto}', -1)" class="px-2.5 py-1.5 hover:bg-neutral-900 transition-colors">-</button>
+                                    <span class="px-1">${qty}</span>
+                                    <button onclick="updateCart('${p.id_produto}', 1)" class="px-2.5 py-1.5 hover:bg-neutral-900 transition-colors">+</button>
+                                </div>
+                            ` : `
+                                <button onclick="updateCart('${p.id_produto}', 1)" class="bg-white border border-neutral-200 text-black hover:bg-black hover:text-white rounded-lg text-xs tracking-wider font-medium py-1.5 px-3 transition-all duration-300">
+                                    + Adicionar
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function syncSearch(val) {
+            currentSearchGlobal = val;
+            document.getElementById('search-input-pc').value = val;
+            document.getElementById('search-input-mobile').value = val;
+            renderClientProducts(val);
+        }
+
+        function filterCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left";
+            });
+            event.currentTarget.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left shadow-sm";
+            renderClientProducts(currentSearchGlobal);
+        }
+
+        function updateCart(id, change) {
+            if (!cart[id]) cart[id] = 0;
+            cart[id] += change;
+            if (cart[id] <= 0) delete cart[id];
+            renderClientProducts(currentSearchGlobal);
+            updateCartBar();
+        }
+
+        function updateCartBar() {
+            let totalItens = 0; let totalPreco = 0;
+            Object.keys(cart).forEach(id => {
+                const prod = datasetProducts.find(p => p.id_produto === id);
+                if(prod) { totalItens += cart[id]; totalPreco += (prod.preco * cart[id]); }
+            });
+            document.getElementById('cart-count-mobile').innerText = totalItens;
+            document.getElementById('cart-total-mobile').innerText = `R$ ${totalPreco.toFixed(2).replace('.', ',')}`;
+            document.getElementById('cart-count-pc').innerText = totalItens;
+            document.getElementById('modal-total-value').innerText = `R$ ${totalPreco.toFixed(2).replace('.', ',')}`;
+
+            const mobileBar = document.getElementById('cart-bar-mobile');
+            if (totalItens > 0) mobileBar.classList.remove('translate-y-full');
+            else { mobileBar.classList.add('translate-y-full'); document.getElementById('checkout-modal').classList.add('hidden'); }
+        }
+
+        function toggleCheckoutModal() {
+            const modal = document.getElementById('checkout-modal');
+            modal.classList.toggle('hidden');
+            if(!modal.classList.contains('hidden')) {
+                const list = document.getElementById('cart-items-list'); list.innerHTML = '';
+                Object.keys(cart).forEach(id => {
+                    const prod = datasetProducts.find(p => p.id_produto === id);
+                    const itemRow = document.createElement('div');
+                    itemRow.className = "flex items-center justify-between py-3 text-xs text-neutral-700 border-b border-neutral-100";
+                    itemRow.innerHTML = `<div class="flex items-center gap-3"><span class="font-bold text-black bg-neutral-50 px-2 py-1 rounded border border-neutral-200">${cart[id]}x</span><span class="font-light">${prod.nome}</span></div><span class="font-semibold text-black">R$ ${(prod.preco * cart[id]).toFixed(2).replace('.', ',')}</span>`;
+                    list.appendChild(itemRow);
+                });
+            }
+        }
+
+        function submitOrder() {
+            alert('Pedido simulado com sucesso!');
+            cart = {}; updateCartBar(); toggleCheckoutModal(); renderClientProducts();
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = '';
+
+            datasetProducts.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-neutral-50/80 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-4 flex items-center gap-3">
+                        <img src="${p.foto}" class="w-10 h-10 object-cover rounded-md border border-neutral-100 grayscale">
+                        <span class="font-medium text-neutral-900">${p.nome}</span>
+                    </td>
+                    <td class="py-4 uppercase tracking-wider text-[10px] text-neutral-400 font-bold">${p.categoria}</td>
+                    <td class="py-4 font-semibold text-neutral-900">R$ ${p.preco.toFixed(2)}</td>
+                    <td class="py-4 text-center">
+                        <button onclick="toggleVisibilidade('${p.id_produto}')" class="px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all ${p.visivel ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-500'}">
+                            ${p.visivel ? 'Exibindo' : 'Oculto'}
+                        </button>
+                    </td>
+                    <td class="py-4 text-right space-x-2">
+                        <button onclick="carregarParaEdicao('${p.id_produto}')" class="text-neutral-400 hover:text-black font-semibold text-[11px] uppercase tracking-wider">Editar</button>
+                        <button onclick="excluirProduto('${p.id_produto}')" class="text-neutral-300 hover:text-red-600 font-semibold text-[11px] uppercase tracking-wider ml-2">Excluir</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function salvarProduto() {
+            const id = document.getElementById('prod-id').value;
+            const nome = document.getElementById('prod-nome').value;
+            const preco = parseFloat(document.getElementById('prod-preco').value);
+            const categoria = document.getElementById('prod-categoria').value;
+
+            // Pega o Base64 gerado pelo upload local. Se não houver, usa imagem padrão
+            const foto = document.getElementById('prod-foto-base64').value || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+
+            if(!nome || isNaN(preco)) { alert('Por favor, defina o nome e valor do acessório.'); return; }
+
+            if(id) {
+                const index = datasetProducts.findIndex(p => p.id_produto === id);
+                datasetProducts[index] = { ...datasetProducts[index], nome, preco, categoria, foto };
+            } else {
+                const novoItem = {
+                    id_produto: 'a' + (new Date().getTime()),
+                    nome, preco, categoria, foto, visivel: true
+                };
+                datasetProducts.push(novoItem);
+            }
+
+            limparFormulario();
+            renderAdminTable();
+        }
+
+        function carregarParaEdicao(id) {
+            const p = datasetProducts.find(prod => prod.id_produto === id);
+            if(!p) return;
+
+            document.getElementById('prod-id').value = p.id_produto;
+            document.getElementById('prod-nome').value = p.nome;
+            document.getElementById('prod-preco').value = p.preco;
+            document.getElementById('prod-categoria').value = p.categoria;
+            document.getElementById('prod-foto-base64').value = p.foto;
+
+            // Injeta a miniatura no Preview na edição
+            document.getElementById('upload-placeholder-view').classList.add('hidden');
+            const previewContainer = document.getElementById('upload-preview-container');
+            previewContainer.classList.remove('hidden');
+            previewContainer.classList.add('flex');
+            document.getElementById('upload-preview-img').src = p.foto;
+
+            document.getElementById('form-title').innerText = "Refinar Acessório Escolhido";
+            document.getElementById('btn-cancelar').classList.remove('hidden');
+        }
+
+        function excluirProduto(id) {
+            if(confirm("Deseja remover este acessório?")) {
+                datasetProducts = datasetProducts.filter(p => p.id_produto !== id);
+                renderAdminTable();
+            }
+        }
+
+        function toggleVisibilidade(id) {
+            const index = datasetProducts.findIndex(p => p.id_produto === id);
+            datasetProducts[index].visivel = !datasetProducts[index].visivel;
+            renderAdminTable();
+        }
+
+        function limparFormulario() {
+            document.getElementById('prod-id').value = '';
+            document.getElementById('prod-nome').value = '';
+            document.getElementById('prod-preco').value = '';
+            document.getElementById('prod-file').value = '';
+            document.getElementById('prod-foto-base64').value = '';
+
+            // Reseta caixa de upload para o estado inicial
+            document.getElementById('upload-placeholder-view').classList.remove('hidden');
+            document.getElementById('upload-preview-container').classList.replace('flex', 'hidden');
+            document.getElementById('upload-preview-img').src = '';
+
+            document.getElementById('form-title').innerText = "Curar Novo Acessório";
+            document.getElementById('btn-cancelar').className = "hidden";
+        }
+
+        function filtrarRelatorio() {
+            const dia = document.getElementById('filter-dia').value;
+            const mes = document.getElementById('filter-mes').value;
+            const ano = document.getElementById('filter-ano').value;
+
+            let faturamentoBase = 4890.00; let pedidosBase = 18;
+            if(dia) { faturamentoBase = 320.00; pedidosBase = 2; }
+            else if(mes) { faturamentoBase = 1450.00; pedidosBase = 6; }
+
+            document.getElementById('dash-faturamento').innerText = `R$ ${faturamentoBase.toFixed(2).replace('.', ',')}`;
+            document.getElementById('dash-pedidos').innerText = pedidosBase;
+            alert(`Filtro Executado para o período selecionado.`);
+        }
+
+        renderClientProducts();
+    </script>
+</body>
+</html>
