@@ -744,21 +744,20 @@ carregarProdutosDoBanco();
         renderClientProducts();
     </script>
 
-<div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white border border-neutral-200 w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl">
-        <div class="text-center space-y-1">
-            <h3 class="font-luxury text-xl tracking-widest text-black uppercase">Acesso Restrito</h3>
-            <p class="text-[10px] text-neutral-400 uppercase tracking-wider">Identifique-se para gerenciar o acervo</p>
-        </div>
-        <div class="space-y-1">
-            <label class="text-[10px] text-neutral-400 uppercase font-semibold">Senha de Administrador</label>
-            <input type="password" id="admin-password-input" placeholder="••••••••" class="w-full p-3 bg-neutral-50 border rounded-xl text-center text-sm focus:outline-none focus:border-black font-mono">
-        </div>
-        <div class="flex gap-2 pt-2">
-            <button onclick="fecharModalLogin()" class="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-widest py-3 rounded-xl transition-all">Cancelar</button>
-            <button onclick="autenticarAdmin()" class="flex-1 bg-black hover:bg-neutral-900 text-white text-xs font-bold uppercase tracking-widest py-3 rounded-xl transition-all shadow-md">Entrar</button>
+<!-- MODAL DE AUTENTICAÇÃO RESTRETA -->
+    <div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white border border-neutral-200 w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl text-center">
+            <span class="material-symbols-rounded text-gold text-4xl animate-pulse">encrypted</span>
+            <div>
+                <h3 class="font-luxury text-lg uppercase tracking-wider text-black">Acesso Restrito</h3>
+                <p class="text-xs text-neutral-400 font-light mt-1">Informe a chave mestra para gerenciar o acervo.</p>
+            </div>
+            <input type="password" id="admin-password-input" placeholder="Digite a senha administrativa..." class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-center text-sm focus:outline-none focus:border-black font-mono">
+            <div class="flex gap-2">
+                <button onclick="autenticarAdmin()" class="flex-1 bg-black text-white text-xs font-bold uppercase tracking-widest py-3 rounded-xl hover:bg-neutral-900 transition-colors">Entrar</button>
+                <button onclick="fecharModalLogin()" class="flex-1 bg-neutral-100 text-neutral-700 text-xs font-bold uppercase tracking-widest py-3 rounded-xl hover:bg-neutral-200 transition-colors">Cancelar</button>
+            </div>
         </div>
     </div>
-</div>
 </body>
 </html>
