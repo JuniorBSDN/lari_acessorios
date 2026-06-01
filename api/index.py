@@ -2,19 +2,56 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import requests
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
-# Habilita CORS para evitar qualquer bloqueio de requisições vindas do frontend
-CORS(app)
+CORS(app)  # Evita bloqueios de requisições cruzadas (CORS) entre frontend e backend
 
-# Variáveis lidas de forma segura do painel de controle da Vercel
+# Configurações de ambiente injetadas pelo painel da Vercel
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
-ADMIN_PASSWORD = os.environ.get("123")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
 
 
-# ==========================================
-# 1. ENDPOINT DE AUTENTICAÇÃO (LOGIN)
-# ==========================================
+def obter_conexao():
+    """Retorna uma conexão limpa com o PostgreSQL usando dicionários para mapeamento."""
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+
+
+def inicializar_infraestrutura_banco():
+    """Cria a tabela relacional de produtos na inicialização caso ela não exista."""
+    if not DATABASE_URL:
+        print("Aviso: DATABASE_URL não localizada nas variáveis de ambiente.")
+        return
+    try:
+        conn = obter_conexao()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS produtos (
+                id_produto VARCHAR(50) PRIMARY KEY,
+                nome VARCHAR(255) NOT NULL,
+                preco NUMERIC(10, 2) NOT NULL,
+                categoria VARCHAR(100) NOT NULL,
+                foto TEXT NOT NULL,
+                visivel BOOLEAN DEFAULT TRUE
+            );
+        """)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Infraestrutura do banco PostgreSQL verificada/criada com sucesso.")
+    except Exception as e:
+        print(f"Erro crítico na inicialização do banco: {str(e)}")
+
+
+# Executa a checagem estrutural do banco de dados na subida do container serverless
+inicializar_infraestrutura_banco()
+
+
+# ======================================================================
+# 1. CONTROLE DE AUTENTICAÇÃO DO ADMINISTRADOR
+# ======================================================================
 @app.route("/api/login", methods=["POST"])
 @app.route("/login", methods=["POST"])
 def login_admin():
@@ -22,7 +59,7 @@ def login_admin():
     senha_enviada = dados.get("senha")
 
     if not senha_enviada:
-        return jsonify({"authenticated": False, "error": "Senha não fornecida."}), 400
+        return jsonify({"authenticated": False, "error": "Senha não informada."}), 400
 
     if senha_enviada == ADMIN_PASSWORD:
         return jsonify({"authenticated": True, "token": "sessao_valida_lari_premium"}), 200
@@ -30,111 +67,132 @@ def login_admin():
         return jsonify({"authenticated": False, "error": "Senha incorreta."}), 401
 
 
-# ==========================================
-# 2. ENDPOINT DE UPLOAD DE ARQUIVOS (VERCEL BLOB)
-# ==========================================
+# ======================================================================
+# 2. PROVEDOR DE ARMAZENAMENTO DE MÍDIA (VERCEL BLOB STORAGE)
+# ======================================================================
 @app.route("/api/upload", methods=["POST"])
 @app.route("/upload", methods=["POST"])
 def upload_foto():
-    # Validação rigorosa do token de sessão no cabeçalho HTTP
     token_sessao = request.headers.get("Authorization")
     if token_sessao != "Bearer sessao_valida_lari_premium":
         return jsonify({"error": "Acesso não autorizado."}), 403
 
     if 'foto' not in request.files:
-        return jsonify({"error": "Nenhum arquivo enviado no formulário."}), 400
+        return jsonify({"error": "Nenhum arquivo de imagem enviado."}), 400
 
     file = request.files['foto']
     if file.filename == '':
-        return jsonify({"error": "Arquivo sem nome válido."}), 400
+        return jsonify({"error": "Nome de arquivo inválido."}), 400
 
-    # Extração de extensão e geração de hash aleatório seguro para o arquivo
     ext = os.path.splitext(file.filename)[1]
     nome_id = f"produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
-        return jsonify({"error": "Token do Vercel Blob não configurado na infraestrutura."}), 500
+        return jsonify({"error": "Token de gravação do Vercel Blob ausente."}), 500
 
-    # Configuração dos cabeçalhos exigidos pela API de borda da Vercel Storage
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
         "x-api-version": "1",
     }
-
     url_destino_blob = f"https://blob.vercel-storage.com/{nome_id}"
 
     try:
-        # Transferência binária via PUT diretamente para os servidores da Vercel
         resposta_vercel = requests.put(url_destino_blob, data=conteudo_binario, headers=headers)
         if resposta_vercel.status_code == 200:
             dados_retorno = resposta_vercel.json()
             return jsonify({"url": dados_retorno["url"]}), 200
         else:
-            return jsonify({"error": f"Erro na API da Vercel Blob: {resposta_vercel.text}"}), 500
-
+            return jsonify({"error": f"Erro na API de borda da Vercel: {resposta_vercel.text}"}), 500
     except Exception as e:
-        return jsonify({"error": f"Falha interna de comunicação no servidor: {str(e)}"}), 500
+        return jsonify({"error": f"Falha de comunicação interna de mídia: {str(e)}"}), 500
 
 
-# ==========================================
-# 3. ENDPOINTS PARA DEMANDAS E REQUISITOS FUTUROS
-# (Gestão de Coleções, Visibilidade e Relatórios)
-# ==========================================
+# ======================================================================
+# 3. GESTÃO DOS REGISTROS DOS PRODUTOS (PERSISTÊNCIA RELACIONAL)
+# ======================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
 @app.route("/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
-    """
-    Endpoint preparado para futuras integrações de persistência global (Firestore/PostgreSQL).
-    Atualmente responde com sucesso para garantir o fluxo contínuo do ecossistema.
-    """
     if request.method == "POST":
         token_sessao = request.headers.get("Authorization")
         if token_sessao != "Bearer sessao_valida_lari_premium":
             return jsonify({"error": "Acesso não autorizado."}), 403
 
         dados = request.get_json() or {}
-        # Aqui a lógica processará o salvamento definitivo no banco de dados configurado
-        return jsonify({"status": "success", "message": "Produto processado com sucesso.", "data": dados}), 201
+        id_produto = dados.get("id_produto")
+        nome = dados.get("nome")
+        preco = dados.get("preco")
+        categoria = dados.get("categoria")
+        foto = dados.get("foto")
+        visivel = dados.get("visivel", True)
 
-    # Retorno padrão para requisições GET
-    return jsonify({"status": "success", "message": "Vitrine carregada com sucesso."}), 200
+        if not id_produto or not nome or preco is None:
+            return jsonify({"error": "Metadados essenciais incompletos."}), 400
+
+        try:
+            conn = obter_conexao()
+            cursor = conn.cursor()
+            # Mecanismo de UPSERT robusto para criação e atualização simultâneas
+            cursor.execute("""
+                INSERT INTO produtos (id_produto, nome, preco, categoria, foto, visivel)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id_produto) DO UPDATE 
+                SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
+                    categoria = EXCLUDED.categoria, foto = EXCLUDED.foto, visivel = EXCLUDED.visivel;
+            """, (id_produto, nome, float(preco), categoria, foto, visivel))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return jsonify({"status": "success", "message": "Dados sincronizados no PostgreSQL."}), 201
+        except Exception as e:
+            return jsonify({"error": f"Falha operacional no banco Postgres: {str(e)}"}), 500
+
+    # Processamento padrão de GET (Listagem pública da vitrine)
+    try:
+        conn = obter_conexao()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM produtos;")
+        registros = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        # Saneamento de tipos numéricos para serialização estável em JSON
+        for r in registros:
+            r['preco'] = float(r['preco'])
+        return jsonify(registros), 200
+    except Exception as e:
+        return jsonify({"error": f"Falha ao consultar acervo no banco: {str(e)}"}), 500
 
 
-@app.route("/api/relatorios", methods=["POST"])
-@app.route("/relatorios", methods=["POST"])
-def gerar_relatorio_inteligente():
-    """
-    Endpoint para processar filtros avançados de faturamento por Dia/Mês/Ano na nuvem.
-    """
-    dados = request.get_json() or {}
-    dia = dados.get("dia")
-    mes = dados.get("mes")
-    ano = dados.get("ano", "2026")
+@app.route("/api/produtos/<id_prod>", methods=["DELETE"])
+def remover_produto_banco(id_prod):
+    token_sessao = request.headers.get("Authorization")
+    if token_sessao != "Bearer sessao_valida_lari_premium":
+        return jsonify({"error": "Acesso não autorizado."}), 403
 
-    # Prontificado para devolver as agregações de pedidos refinadas do banco de dados
-    return jsonify({
-        "status": "success",
-        "periodo_filtrado": f"{dia if dia else 'XX'}/{mes if mes else 'XX'}/{ano}",
-        "faturamento_calculado": 0.0,
-        "pedidos_totais": 0
-    }), 200
+    try:
+        conn = obter_conexao()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM produtos WHERE id_produto = %s;", (id_prod,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"status": "success", "message": "Registro removido com sucesso."}), 200
+    except Exception as e:
+        return jsonify({"error": f"Falha ao expurgar registro do banco: {str(e)}"}), 500
 
 
-# ==========================================
-# 4. ROTA CORINGA DE SEGURANÇA (CATCH-ALL)
-# ==========================================
+# ======================================================================
+# 4. ROTA DE SEGURANÇA E ESCAPE (CATCH-ALL)
+# ======================================================================
 @app.route("/api", defaults={"path": ""})
 @app.route("/api/<path:path>")
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def catch_all(path):
-    """
-    Previne falhas de rotas (404 Not Found) geradas pelo ciclo de roteamento do vercel.json,
-    mantendo a API em estado de prontidão estável.
-    """
     return jsonify({
-        "status": "API LariAcessórios ativa",
-        "versao": "Premium Ecosystem v2.0",
-        "path_solicitado": path
+        "status": "API Premium ativa",
+        "ambiente": "Vercel Serverless Edge Core",
+        "gateway_route": path
     }), 200
