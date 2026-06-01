@@ -336,6 +336,130 @@
         let currentSearchGlobal = '';
         let tokenSessao = null; // Guarda o token de autenticação em memória
 
+
+
+// Substitua a carga inicial e a chamada das tabelas/vitrines por esta lógica assíncrona:
+async function carregarProdutosDoBanco() {
+    try {
+        const response = await fetch('/api/produtos');
+        if (response.ok) {
+            datasetProducts = await response.json();
+            renderClientProducts(currentSearchGlobal);
+            if(tokenSessao) renderAdminTable();
+        } else {
+            console.error("Erro na resposta da API de listagem.");
+        }
+    } catch (err) {
+        console.error("Erro de conexão com o banco de dados:", err);
+    }
+}
+
+// Substitua milimetricamente a sua função antiga de salvarProdutoCompleto por esta:
+async function salvarProdutoCompleto() {
+    const id_existente = document.getElementById('prod-id').value;
+    const nome = document.getElementById('prod-nome').value;
+    const preco = parseFloat(document.getElementById('prod-preco').value);
+    const categoria = document.getElementById('prod-categoria').value;
+    const fileInput = document.getElementById('prod-file');
+    const file = fileInput.files[0];
+
+    if(!nome || isNaN(preco)) { alert('Preencha os campos obrigatórios corretamente.'); return; }
+
+    let urlFinalFoto = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500";
+
+    // Se o usuário selecionou uma nova imagem, executa upload prioritário para o Blob da Vercel
+    if(file) {
+        const formData = new FormData();
+        formData.append('foto', file);
+        try {
+            const uploadResponse = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${tokenSessao}` },
+                body: formData
+            });
+            const uploadResult = await uploadResponse.json();
+            if(!uploadResponse.ok) throw new Error(uploadResult.error || "Erro de transferência");
+            urlFinalFoto = uploadResult.url;
+        } catch (err) {
+            alert("Falha crítica no upload da imagem: " + err.message);
+            return;
+        }
+    } else if (id_existente) {
+        // Modo Edição: preserva a foto anterior se nenhum arquivo novo foi carregado no input
+        const produtoAntigo = datasetProducts.find(p => p.id_produto === id_existente);
+        if (produtoAntigo) urlFinalFoto = produtoAntigo.foto;
+    }
+
+    const id_produto = id_existente || 'p_' + new Date().getTime();
+    const objetoProduto = { id_produto, nome, preco, categoria, foto: urlFinalFoto, visivel: true };
+
+    // Sincroniza diretamente com o banco de dados via API
+    try {
+        const response = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${tokenSessao}`
+            },
+            body: JSON.stringify(objetoProduto)
+        });
+
+        if (response.ok) {
+            await carregarProdutosDoBanco(); // Atualização em lote direto da fonte limpa
+            limparFormulario();
+            alert("Catálogo atualizado com sucesso no banco de dados relacional!");
+        } else {
+            alert("A API rejeitou a gravação dos dados do produto.");
+        }
+    } catch (err) {
+        alert("Erro na comunicação de rede com o servidor.");
+    }
+}
+
+// Substitua a sua função antiga de removerProduto por esta sincronizada:
+async function removerProduto(id) {
+    if(confirm("Tem certeza que deseja apagar permanentemente este acessório do acervo na nuvem?")) {
+        try {
+            const response = await fetch(`/api/produtos/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${tokenSessao}` }
+            });
+            if (response.ok) {
+                await carregarProdutosDoBanco();
+            } else {
+                alert("A API recusou a requisição de exclusão.");
+            }
+        } catch(err) {
+            alert("Erro de conexão ao remover produto.");
+        }
+    }
+}
+
+// Substitua a sua função antiga toggleVisibilidade por esta:
+async function toggleVisibilidade(id) {
+    const p = datasetProducts.find(item => item.id_produto === id);
+    if(p) {
+        p.visivel = !p.visivel;
+        try {
+            await fetch('/api/produtos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenSessao}` },
+                body: JSON.stringify(p)
+            });
+            // Recarrega em background para alinhar os estados das vitrines
+            await carregarProdutosDoBanco();
+        } catch(err) {
+            console.error("Erro ao chavear visibilidade do item:", err);
+        }
+    }
+}
+
+// Mude a última linha do script do seu arquivo de: "renderClientProducts();" para:
+carregarProdutosDoBanco();
+
+
+
+
         // PROCESSADOR DE PRÉ-VISUALIZAÇÃO DE IMAGENS
         function processImageFile(input) {
             const file = input.files[0];
@@ -406,47 +530,6 @@
         }
 
         // FUNÇÃO DE UPLOAD SEGURO + GRAVAÇÃO NO DATASET
-        async function salvarProdutoCompleto() {
-            const nome = document.getElementById('prod-nome').value;
-            const preco = parseFloat(document.getElementById('prod-preco').value);
-            const categoria = document.getElementById('prod-categoria').value;
-            const fileInput = document.getElementById('prod-file');
-            const file = fileInput.files[0];
-
-            if(!nome || isNaN(preco)) { alert('Preencha nome e preço corretamente.'); return; }
-
-            let urlFinalFoto = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500";
-
-            if(file) {
-                const formData = new FormData();
-                formData.append('foto', file);
-
-                try {
-                    const uploadResponse = await fetch('/api/upload', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${tokenSessao}` },
-                        body: formData
-                    });
-                    const uploadResult = await uploadResponse.json();
-
-                    if(!uploadResponse.ok) throw new Error(uploadResult.error || "Erro no upload");
-                    urlFinalFoto = uploadResult.url;
-                } catch (err) {
-                    alert("Erro ao enviar imagem: " + err.message);
-                    return;
-                }
-            }
-
-            const novoProduto = {
-                id_produto: 'a' + new Date().getTime(),
-                nome, preco, categoria, foto: urlFinalFoto, visivel: true
-            };
-
-            datasetProducts.push(novoProduto);
-            limparFormulario();
-            renderAdminTable();
-            alert("Produto cadastrado com sucesso na infraestrutura!");
-        }
 
         // RENDERIZAR VITRINE DO CLIENTE (Corrigido e fechado)
         function renderClientProducts(filterText = '') {
@@ -597,12 +680,7 @@
             if(p) p.visivel = !p.visivel;
         }
 
-        function removerProduto(id) {
-            if(confirm("Deseja realmente remover este acessório?")) {
-                datasetProducts = datasetProducts.filter(item => item.id_produto !== id);
-                renderAdminTable();
-            }
-        }
+
 
         function atualizarDashboard() {
             const totalCadastrados = datasetProducts.length;
