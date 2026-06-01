@@ -184,12 +184,10 @@ def remover_produto_banco(id_prod):
 
 
 # ======================================================================
-# 4. ROTA DE SEGURANÇA E ESCAPE (CATCH-ALL)
+# 4. ROTA DE SEGURANÇA E ESCAPE (CATCH-ALL DA API)
 # ======================================================================
 @app.route("/api", defaults={"path": ""})
 @app.route("/api/<path:path>")
-@app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
 def catch_all(path):
     return jsonify({
         "status": "API Premium ativa",
