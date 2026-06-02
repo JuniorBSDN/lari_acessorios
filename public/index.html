@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LariAcessórios | Premium Ecosystem</title>
+    <title>LariAcessórios</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,200,0,0" />
@@ -322,21 +322,13 @@
 
     <!-- ENGINE LOGIC -->
     <script>
-        let datasetProducts = [
-            { id_produto: "a1", nome: "Relógio Minimalist Silver Chrono", preco: 289.90, categoria: "relogios", foto: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60", visivel: true },
-            { id_produto: "a2", nome: "Relógio Gold All Black Masculino", preco: 349.00, categoria: "relogios", foto: "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?w=500&auto=format&fit=crop&q=60", visivel: true },
-            { id_produto: "a3", nome: "Cordão Veneziana Prata 925 Slim", preco: 119.90, categoria: "cordoes", foto: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500&auto=format&fit=crop&q=60", visivel: true },
-            { id_produto: "a4", nome: "Cordão Elos de Ouro 18k Plated", preco: 189.00, categoria: "cordoes", foto: "https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?w=500&auto=format&fit=crop&q=60", visivel: true },
-            { id_produto: "a5", nome: "Bolsa Tote Couro Eco Texturizada", preco: 240.00, categoria: "bolsas", foto: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&auto=format&fit=crop&q=60", visivel: true },
-            { id_produto: "a6", nome: "Bolsa Crossbody Black Diamond Clasp", preco: 198.50, categoria: "bolsas", foto: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&auto=format&fit=crop&q=60", visivel: true }
-        ];
+        // Inicia vazio, pois o acervo real vem 100% do PostgreSQL via API
+let datasetProducts = [];
 
-        let cart = {};
-        let currentCategory = 'todos';
-        let currentSearchGlobal = '';
-        let tokenSessao = null; // Guarda o token de autenticação em memória
-
-
+let cart = {};
+let currentCategory = 'todos';
+let currentSearchGlobal = '';
+let tokenSessao = null; // Guarda o token de autenticação em memória
 
 // Substitua a carga inicial e a chamada das tabelas/vitrines por esta lógica assíncrona:
 async function carregarProdutosDoBanco() {
@@ -435,21 +427,21 @@ async function removerProduto(id) {
     }
 }
 
-// Substitua a sua função antiga toggleVisibilidade por esta:
 async function toggleVisibilidade(id) {
     const p = datasetProducts.find(item => item.id_produto === id);
     if(p) {
-        p.visivel = !p.visivel;
+        p.visivel = !p.visivel; // Altera o estado local imediatamente
         try {
             await fetch('/api/produtos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenSessao}` },
                 body: JSON.stringify(p)
             });
-            // Recarrega em background para alinhar os estados das vitrines
+            // Recarrega em background para alinhar os estados e atualiza o dashboard visual
             await carregarProdutosDoBanco();
         } catch(err) {
             console.error("Erro ao chavear visibilidade do item:", err);
+            p.visivel = !p.visivel; // Reverte o estado local em caso de falha de rede
         }
     }
 }
@@ -458,24 +450,36 @@ async function toggleVisibilidade(id) {
 carregarProdutosDoBanco();
 
 
+function limparFormulario() {
+    document.getElementById('prod-id').value = '';
+    document.getElementById('prod-nome').value = '';
+    document.getElementById('prod-preco').value = '';
+    document.getElementById('prod-file').value = ''; // Limpa o arquivo anterior
 
+    // Reseta o estado visual do Drag & Drop box
+    document.getElementById('upload-placeholder-view').classList.remove('hidden');
+    document.getElementById('upload-preview-container').classList.replace('flex', 'hidden');
+}
 
-        // PROCESSADOR DE PRÉ-VISUALIZAÇÃO DE IMAGENS
         function processImageFile(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const base64Content = e.target.result;
-                    document.getElementById('upload-placeholder-view').classList.add('hidden');
-                    const previewContainer = document.getElementById('upload-preview-container');
-                    previewContainer.classList.remove('hidden');
-                    previewContainer.classList.add('flex');
-                    document.getElementById('upload-preview-img').src = base64Content;
-                }
-                reader.readAsDataURL(file);
-            }
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Content = e.target.result;
+
+            // Oculta o texto de "Clique para selecionar"
+            document.getElementById('upload-placeholder-view').classList.add('hidden');
+
+            // Exibe e atualiza a miniatura com o preview real da foto
+            const previewContainer = document.getElementById('upload-preview-container');
+            previewContainer.classList.remove('hidden');
+            previewContainer.classList.add('flex');
+            document.getElementById('upload-preview-img').src = base64Content;
         }
+        reader.readAsDataURL(file);
+    }
+}
 
         // CONTROLE DE TELAS (CLIENTE / ADMIN)
         function switchView(target) {
@@ -724,7 +728,7 @@ carregarProdutosDoBanco();
             });
 
             textoZap += `\n*Valor Total:* R$ ${total.toFixed(2).replace('.', ',')}`;
-            window.open(`https://api.whatsapp.com/send?phone=5591999999999&text=${encodeURIComponent(textoZap)}`, '_blank');
+            window.open(`https://api.whatsapp.com/send?phone=5591982005830&text=${encodeURIComponent(textoZap)}`, '_blank');
         }
 
         function limparFormulario() {
@@ -742,6 +746,9 @@ carregarProdutosDoBanco();
 
         // Inicializa a vitrine
         renderClientProducts();
+
+        // Inicializa a vitrine buscando os dados reais do banco
+carregarProdutosDoBanco();
     </script>
 
 <!-- MODAL DE AUTENTICAÇÃO RESTRETA -->
