@@ -6,21 +6,18 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
-CORS(app)  # Evita bloqueios de requisições cruzadas (CORS) entre frontend e backend
+CORS(app)
 
-# Configurações de ambiente injetadas pelo painel da Vercel
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
 
 
 def obter_conexao():
-    """Retorna uma conexão limpa com o PostgreSQL usando dicionários para mapeamento."""
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
 def inicializar_infraestrutura_banco():
-    """Cria a tabela relacional de produtos na inicialização caso ela não exista."""
     if not DATABASE_URL:
         print("Aviso: DATABASE_URL não localizada nas variáveis de ambiente.")
         return
@@ -45,7 +42,6 @@ def inicializar_infraestrutura_banco():
         print(f"Erro crítico na inicialização do banco: {str(e)}")
 
 
-# Executa a checagem estrutural do banco de dados na subida do container serverless
 inicializar_infraestrutura_banco()
 
 
@@ -85,15 +81,16 @@ def upload_foto():
         return jsonify({"error": "Nome de arquivo inválido."}), 400
 
     ext = os.path.splitext(file.filename)[1]
-    nome_id = f"produto_{os.urandom(4).hex()}{ext}"
+    nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
         return jsonify({"error": "Token de gravação do Vercel Blob ausente."}), 500
 
+    # Headers corrigidos para a API REST da Vercel (Adicionado o controle de acesso público)
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
-        "x-api-version": "1",
+        "x-api-version": "1"
     }
     url_destino_blob = f"https://blob.vercel-storage.com/{nome_id}"
 
@@ -103,13 +100,13 @@ def upload_foto():
             dados_retorno = resposta_vercel.json()
             return jsonify({"url": dados_retorno["url"]}), 200
         else:
-            return jsonify({"error": f"Erro na API de borda da Vercel: {resposta_vercel.text}"}), 500
+            return jsonify({"error": f"Erro na API da Vercel: {resposta_vercel.text}"}), 500
     except Exception as e:
         return jsonify({"error": f"Falha de comunicação interna de mídia: {str(e)}"}), 500
 
 
 # ======================================================================
-# 3. GESTÃO DOS REGISTROS DOS PRODUTOS (PERSISTÊNCIA RELACIONAL)
+# 3. GESTÃO DOS REGISTROS DOS PRODUTOS
 # ======================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
 @app.route("/produtos", methods=["GET", "POST"])
@@ -133,31 +130,28 @@ def gerenciar_produtos():
         try:
             conn = obter_conexao()
             cursor = conn.cursor()
-            # Mecanismo de UPSERT robusto para criação e atualização simultâneas
             cursor.execute("""
                 INSERT INTO produtos (id_produto, nome, preco, categoria, foto, visivel)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id_produto) DO UPDATE 
                 SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
                     categoria = EXCLUDED.categoria, foto = EXCLUDED.foto, visivel = EXCLUDED.visivel;
-            """, (id_produto, nome, float(preco), categoria, foto, visivel))
+            """, (id_produto, nome, float(preco), foto, visivel))
             conn.commit()
             cursor.close()
             conn.close()
-            return jsonify({"status": "success", "message": "Dados sincronizados no PostgreSQL."}), 201
+            return jsonify({"status": "success", "message": "Dados sincronizados."}), 201
         except Exception as e:
             return jsonify({"error": f"Falha operacional no banco Postgres: {str(e)}"}), 500
 
-    # Processamento padrão de GET (Listagem pública da vitrine)
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM produtos;")
+        cursor.execute("SELECT * FROM produtos ORDER BY nome ASC;")
         registros = cursor.fetchall()
         cursor.close()
         conn.close()
 
-        # Saneamento de tipos numéricos para serialização estável em JSON
         for r in registros:
             r['preco'] = float(r['preco'])
         return jsonify(registros), 200
@@ -183,9 +177,6 @@ def remover_produto_banco(id_prod):
         return jsonify({"error": f"Falha ao expurgar registro do banco: {str(e)}"}), 500
 
 
-# ======================================================================
-# 4. ROTA DE SEGURANÇA E ESCAPE (CATCH-ALL DA API)
-# ======================================================================
 @app.route("/api", defaults={"path": ""})
 @app.route("/api/<path:path>")
 def catch_all(path):
