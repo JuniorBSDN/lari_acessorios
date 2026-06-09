@@ -1,25 +1,33 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
+# Variáveis mapeadas exatamente iguais ao seu print da Vercel
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
+
+# O painel não mostra POSTGRES_URL explicitamente como configurada manualmente,
+# mas se você vinculou o Storage da Vercel, ela é injetada automaticamente em produção.
+# Caso use outra string, adicionamos fallbacks seguros para não quebrar a inicialização.
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
+    "POSTGRES_URL_NON_POOLING")
 
 
 def obter_conexao():
+    if not DATABASE_URL:
+        raise ValueError("A string de conexão com o banco de dados (POSTGRES_URL) não foi configurada na Vercel.")
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
 def inicializar_infraestrutura_banco():
     if not DATABASE_URL:
-        print("Aviso: DATABASE_URL não localizada nas variáveis de ambiente.")
+        print("⚠️ Aviso: Nenhuma variável de Banco de Dados encontrada. O acervo funcionará temporariamente limitado.")
         return
     try:
         conn = obter_conexao()
@@ -37,25 +45,35 @@ def inicializar_infraestrutura_banco():
         conn.commit()
         cursor.close()
         conn.close()
-        print("Infraestrutura do banco PostgreSQL verificada/criada com sucesso.")
+        print("🚀 Infraestrutura do banco PostgreSQL verificada/criada com sucesso.")
     except Exception as e:
-        print(f"Erro crítico na inicialização do banco: {str(e)}")
+        print(f"❌ Erro na inicialização do banco: {str(e)}")
 
 
+# Executa a verificação ao iniciar
 inicializar_infraestrutura_banco()
+
+
+@app.route("/")
+def index():
+    return send_from_directory('.', 'index.html')
 
 
 # ======================================================================
 # 1. CONTROLE DE AUTENTICAÇÃO DO ADMINISTRADOR
 # ======================================================================
 @app.route("/api/login", methods=["POST"])
-@app.route("/login", methods=["POST"])
 def login_admin():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
 
     if not senha_enviada:
         return jsonify({"authenticated": False, "error": "Senha não informada."}), 400
+
+    # Validação rigorosa baseada na variável ADMIN_PASSWORD do print
+    if not ADMIN_PASSWORD:
+        return jsonify(
+            {"authenticated": False, "error": "Senha administrativa não configurada no servidor Vercel."}), 500
 
     if senha_enviada == ADMIN_PASSWORD:
         return jsonify({"authenticated": True, "token": "sessao_valida_lari_premium"}), 200
@@ -67,7 +85,6 @@ def login_admin():
 # 2. PROVEDOR DE ARMAZENAMENTO DE MÍDIA (VERCEL BLOB STORAGE)
 # ======================================================================
 @app.route("/api/upload", methods=["POST"])
-@app.route("/upload", methods=["POST"])
 def upload_foto():
     token_sessao = request.headers.get("Authorization")
     if token_sessao != "Bearer sessao_valida_lari_premium":
@@ -84,10 +101,10 @@ def upload_foto():
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
 
+    # Validação baseada exatamente na chave BLOB_READ_WRITE_TOKEN do print
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
-        return jsonify({"error": "Token de gravação do Vercel Blob ausente."}), 500
+        return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente nas variáveis de ambiente."}), 500
 
-    # Headers corrigidos para a API REST da Vercel (Adicionado o controle de acesso público)
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
         "x-api-version": "1"
@@ -109,7 +126,6 @@ def upload_foto():
 # 3. GESTÃO DOS REGISTROS DOS PRODUTOS
 # ======================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
-@app.route("/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
     if request.method == "POST":
         token_sessao = request.headers.get("Authorization")
@@ -122,7 +138,10 @@ def gerenciar_produtos():
         preco = dados.get("preco")
         categoria = dados.get("categoria")
         foto = dados.get("foto")
-        visivel = dados.get("visivel", True)
+        visivel = dados.get("visivel")
+
+        if visivel is None:
+            visivel = True
 
         if not id_produto or not nome or preco is None:
             return jsonify({"error": "Metadados essenciais incompletos."}), 400
@@ -136,15 +155,19 @@ def gerenciar_produtos():
                 ON CONFLICT (id_produto) DO UPDATE 
                 SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
                     categoria = EXCLUDED.categoria, foto = EXCLUDED.foto, visivel = EXCLUDED.visivel;
-            """, (id_produto, nome, float(preco), foto, visivel))
+            """, (id_produto, nome, float(preco), categoria, foto, bool(visivel)))
             conn.commit()
             cursor.close()
             conn.close()
-            return jsonify({"status": "success", "message": "Dados sincronizados."}), 201
+            return jsonify({"status": "success", "message": "Dados sincronizados com o Postgres."}), 201
         except Exception as e:
-            return jsonify({"error": f"Falha operacional no banco Postgres: {str(e)}"}), 500
+            return jsonify({"error": f"Erro ao gravar no banco: {str(e)}"}), 500
 
+    # Método GET
     try:
+        if not DATABASE_URL:
+            return jsonify([]), 200  # Evita que a página inicial quebre se o banco estiver desconectado
+
         conn = obter_conexao()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM produtos ORDER BY nome ASC;")
@@ -156,7 +179,7 @@ def gerenciar_produtos():
             r['preco'] = float(r['preco'])
         return jsonify(registros), 200
     except Exception as e:
-        return jsonify({"error": f"Falha ao consultar acervo no banco: {str(e)}"}), 500
+        return jsonify({"error": f"Falha ao consultar banco: {str(e)}"}), 500
 
 
 @app.route("/api/produtos/<id_prod>", methods=["DELETE"])
@@ -172,9 +195,9 @@ def remover_produto_banco(id_prod):
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({"status": "success", "message": "Registro removido com sucesso."}), 200
+        return jsonify({"status": "success", "message": "Registro removido."}), 200
     except Exception as e:
-        return jsonify({"error": f"Falha ao expurgar registro do banco: {str(e)}"}), 500
+        return jsonify({"error": f"Erro ao remover do banco: {str(e)}"}), 500
 
 
 @app.route("/api", defaults={"path": ""})
@@ -182,6 +205,6 @@ def remover_produto_banco(id_prod):
 def catch_all(path):
     return jsonify({
         "status": "API Premium ativa",
-        "ambiente": "Vercel Serverless Edge Core",
+        "ambiente": "Vercel Serverless",
         "gateway_route": path
     }), 200
