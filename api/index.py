@@ -112,8 +112,8 @@ def upload_foto():
 # ======================================================================
 # 3. GESTÃO DOS REGISTROS DOS PRODUTOS
 # ======================================================================
-@app.route("/produtos", methods=["GET", "POST"])
 @app.route("/api/produtos", methods=["GET", "POST"])
+@app.route("/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
     if request.method == "POST":
         token_sessao = request.headers.get("Authorization")
