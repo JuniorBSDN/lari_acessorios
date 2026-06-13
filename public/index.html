@@ -749,6 +749,42 @@ function limparFormulario() {
 
         // Inicializa a vitrine buscando os dados reais do banco
 carregarProdutosDoBanco();
+        // LOGIN ADMINISTRATIVO CORRIGIDO
+async function autenticarAdmin() {
+    const senhaInput = document.getElementById('admin-password-input');
+    const senha = senhaInput.value;
+    if(!senha) return;
+
+    try {
+       const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ senha })
+        });
+
+        // Verifica se o servidor não devolveu um erro de rota (Ex: 404 ou 500 html)
+        if (!response.ok && response.status !== 401) {
+            throw new Error(`Servidor respondeu com status ${response.status}`);
+        }
+
+        const resultado = await response.json();
+
+        if(response.ok && resultado.authenticated) {
+            tokenSessao = resultado.token; // Já armazena o "Bearer sessao_valida_lari_premium"
+            document.getElementById('login-modal').classList.add('hidden');
+            senhaInput.value = '';
+
+            document.getElementById('view-client').classList.replace('block', 'hidden');
+            document.getElementById('view-admin').classList.replace('hidden', 'block');
+            renderAdminTable();
+        } else {
+            alert(resultado.error || "Senha inválida.");
+        }
+    } catch (err) {
+        console.error("Erro na autenticação:", err);
+        alert("Erro ao conectar com o servidor de autenticação. Verifique se a variável ADMIN_PASSWORD está definida na Vercel.");
+    }
+}
     </script>
 
 <!-- MODAL DE AUTENTICAÇÃO RESTRETA -->
