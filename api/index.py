@@ -5,16 +5,13 @@ import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-app = Flask(__name__, static_folder='.', static_url_path='')
+# Ajustamos o static_folder para apontar para a pasta public correta no deploy da Vercel
+app = Flask(__name__, static_folder='../public', static_url_path='')
 CORS(app)
 
-# Variáveis mapeadas exatamente iguais ao seu print da Vercel
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
-# O painel não mostra POSTGRES_URL explicitamente como configurada manualmente,
-# mas se você vinculou o Storage da Vercel, ela é injetada automaticamente em produção.
-# Caso use outra string, adicionamos fallbacks seguros para não quebrar a inicialização.
 DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
     "POSTGRES_URL_NON_POOLING")
 
@@ -25,38 +22,37 @@ def obter_conexao():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
-def inicializar_infraestrutura_banco():
-    if not DATABASE_URL:
-        print("⚠️ Aviso: Nenhuma variável de Banco de Dados encontrada. O acervo funcionará temporariamente limitado.")
-        return
-    try:
-        conn = obter_conexao()
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS produtos (
-                id_produto VARCHAR(50) PRIMARY KEY,
-                nome VARCHAR(255) NOT NULL,
-                preco NUMERIC(10, 2) NOT NULL,
-                categoria VARCHAR(100) NOT NULL,
-                foto TEXT NOT NULL,
-                visivel BOOLEAN DEFAULT TRUE
-            );
-        """)
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print("🚀 Infraestrutura do banco PostgreSQL verificada/criada com sucesso.")
-    except Exception as e:
-        print(f"❌ Erro na inicialização do banco: {str(e)}")
-
-
-# Executa a verificação ao iniciar
-inicializar_infraestrutura_banco()
+# Evita travar a inicialização do container serverless (Cold Start)
+@app.before_request
+def verificar_e_inicializar_banco():
+    if not getattr(app, '_banco_verificado', False):
+        if DATABASE_URL:
+            try:
+                conn = obter_conexao()
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS produtos (
+                        id_produto VARCHAR(50) PRIMARY KEY,
+                        nome VARCHAR(255) NOT NULL,
+                        preco NUMERIC(10, 2) NOT NULL,
+                        categoria VARCHAR(100) NOT NULL,
+                        foto TEXT NOT NULL,
+                        visivel BOOLEAN DEFAULT TRUE
+                    );
+                """)
+                conn.commit()
+                cursor.close()
+                conn.close()
+                print("🚀 Infraestrutura do banco PostgreSQL verificada com sucesso.")
+            except Exception as e:
+                print(f"⚠️ Aviso: Conexão pendente com o banco de dados: {str(e)}")
+        app._banco_verificado = True
 
 
 @app.route("/")
 def index():
-    return send_from_directory('.', 'index.html')
+    # Serve o index.html a partir da pasta pública mapeada
+    return send_from_directory('../public', 'index.html')
 
 
 # ======================================================================
@@ -70,12 +66,11 @@ def login_admin():
     if not senha_enviada:
         return jsonify({"authenticated": False, "error": "Senha não informada."}), 400
 
-    # Validação rigorosa baseada na variável ADMIN_PASSWORD do print
     if not ADMIN_PASSWORD:
         return jsonify(
             {"authenticated": False, "error": "Senha administrativa não configurada no servidor Vercel."}), 500
 
-    if senha_enviada == ADMIN_PASSWORD:
+    if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
         return jsonify({"authenticated": True, "token": "sessao_valida_lari_premium"}), 200
     else:
         return jsonify({"authenticated": False, "error": "Senha incorreta."}), 401
@@ -101,7 +96,6 @@ def upload_foto():
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
 
-    # Validação baseada exatamente na chave BLOB_READ_WRITE_TOKEN do print
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
         return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente nas variáveis de ambiente."}), 500
 
@@ -163,10 +157,9 @@ def gerenciar_produtos():
         except Exception as e:
             return jsonify({"error": f"Erro ao gravar no banco: {str(e)}"}), 500
 
-    # Método GET
     try:
         if not DATABASE_URL:
-            return jsonify([]), 200  # Evita que a página inicial quebre se o banco estiver desconectado
+            return jsonify([]), 200
 
         conn = obter_conexao()
         cursor = conn.cursor()
@@ -205,6 +198,6 @@ def remover_produto_banco(id_prod):
 def catch_all(path):
     return jsonify({
         "status": "API Premium ativa",
-        "ambiente": "Vercel Serverless",
+        "ambiente": "Vercel Serverless Edge Core",
         "gateway_route": path
     }), 200
