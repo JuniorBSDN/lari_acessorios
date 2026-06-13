@@ -19,31 +19,33 @@ def obter_conexao():
         raise ValueError("A string de conexão com o banco de dados (POSTGRES_URL) não foi configurada na Vercel.")
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-# Executa a verificação e criação da tabela de forma segura na primeira requisição
-@app.before_request
 def inicializar_infraestrutura_banco():
-    if not getattr(app, '_banco_inicializado', False):
-        if DATABASE_URL:
-            try:
-                conn = obter_conexao()
-                cursor = conn.cursor()
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS produtos (
-                        id_produto VARCHAR(50) PRIMARY KEY,
-                        nome VARCHAR(255) NOT NULL,
-                        preco NUMERIC(10, 2) NOT NULL,
-                        categoria VARCHAR(100) NOT NULL,
-                        foto TEXT NOT NULL,
-                        visivel BOOLEAN DEFAULT TRUE
-                    );
-                """)
-                conn.commit()
-                cursor.close()
-                conn.close()
-                print("🚀 Infraestrutura do banco PostgreSQL verificada com sucesso.")
-            except Exception as e:
-                print(f"⚠️ Aviso: Conexão com o banco falhou ou está pendente: {str(e)}")
-        app._banco_inicializado = True
+    """Inicializa as tabelas de forma segura sem sobrecarregar as rotas serverless"""
+    if DATABASE_URL:
+        try:
+            conn = obter_conexao()
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS produtos (
+                    id_produto VARCHAR(50) PRIMARY KEY,
+                    nome VARCHAR(255) NOT NULL,
+                    preco NUMERIC(10, 2) NOT NULL,
+                    categoria VARCHAR(100) NOT NULL,
+                    foto TEXT NOT NULL,
+                    visivel BOOLEAN DEFAULT TRUE
+                );
+            """)
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print("🚀 Infraestrutura do banco PostgreSQL verificada com sucesso.")
+            return True
+        except Exception as e:
+            print(f"⚠️ Aviso: Conexão com o banco falhou ou está pendente: {str(e)}")
+    return False
+
+# Tenta inicializar uma vez no carregamento do módulo global do contêiner (reduz overhead)
+inicializar_infraestrutura_banco()
 
 @app.route("/")
 def index():
@@ -53,7 +55,7 @@ def index():
 # 1. CONTROLE DE AUTENTICAÇÃO DO ADMINISTRADOR
 # ======================================================================
 @app.route("/api/login", methods=["POST"])
-@app.route("/login", methods=["POST"]) # Fallback seguro para o gateway da Vercel
+@app.route("/login", methods=["POST"])
 def login_admin():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
@@ -65,10 +67,10 @@ def login_admin():
         return jsonify({"authenticated": False, "error": "Senha administrativa não configurada no servidor Vercel."}), 500
 
     if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
-        # Retornamos o token já com o prefixo Bearer embutido para facilitar o frontend
         return jsonify({"authenticated": True, "token": "Bearer sessao_valida_lari_premium"}), 200
     else:
         return jsonify({"authenticated": False, "error": "Senha incorreta."}), 401
+
 # ======================================================================
 # 2. PROVEDOR DE ARMAZENAMENTO DE MÍDIA (VERCEL BLOB STORAGE)
 # ======================================================================
@@ -86,26 +88,34 @@ def upload_foto():
     if file.filename == '':
         return jsonify({"error": "Nome de arquivo inválido."}), 400
 
-    ext = os.path.splitext(file.filename)[1]
+    # Detecta a extensão e o Content-Type correto para a API da Vercel
+    ext = os.path.splitext(file.filename)[1].lower()
+    content_type = file.content_type or "application/octet-stream"
+    
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
         return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente nas variáveis de ambiente."}), 500
 
+    # Adicionados cabeçalhos obrigatórios e recomendados para a API REST da Vercel Store
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
-        "x-api-version": "1"
+        "x-api-version": "1",
+        "x-add-random-suffix": "1",  # Evita colisões de arquivos com o mesmo nome
+        "Content-Type": content_type
     }
+    
     url_destino_blob = f"https://blob.vercel-storage.com/{nome_id}"
 
     try:
         resposta_vercel = requests.put(url_destino_blob, data=conteudo_binario, headers=headers)
         if resposta_vercel.status_code == 200:
             dados_retorno = resposta_vercel.json()
+            # Retorna a URL pública fornecida pela infraestrutura da Vercel
             return jsonify({"url": dados_retorno["url"]}), 200
         else:
-            return jsonify({"error": f"Erro na API da Vercel: {resposta_vercel.text}"}), 500
+            return jsonify({"error": f"Erro na API da Vercel Blob: {resposta_vercel.text}"}), 500
     except Exception as e:
         return jsonify({"error": f"Falha de comunicação interna de mídia: {str(e)}"}), 500
 
@@ -167,6 +177,8 @@ def gerenciar_produtos():
             r['preco'] = float(r['preco'])
         return jsonify(registros), 200
     except Exception as e:
+        # Se por acaso a tabela sumir ou o banco reiniciar, tenta recriar em segundo plano
+        inicializar_infraestrutura_banco()
         return jsonify({"error": f"Falha ao consultar banco: {str(e)}"}), 500
 
 
