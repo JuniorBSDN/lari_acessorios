@@ -52,9 +52,8 @@ def index():
 # ======================================================================
 # 1. CONTROLE DE AUTENTICAÇÃO DO ADMINISTRADOR
 # ======================================================================
-# Mapeia ambas as variações de rota para evitar falhas de redirecionamento da Vercel
-@app.route("/login", methods=["POST"])
 @app.route("/api/login", methods=["POST"])
+@app.route("/login", methods=["POST"]) # Fallback seguro para o gateway da Vercel
 def login_admin():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
@@ -66,10 +65,10 @@ def login_admin():
         return jsonify({"authenticated": False, "error": "Senha administrativa não configurada no servidor Vercel."}), 500
 
     if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
-        return jsonify({"authenticated": True, "token": "sessao_valida_lari_premium"}), 200
+        # Retornamos o token já com o prefixo Bearer embutido para facilitar o frontend
+        return jsonify({"authenticated": True, "token": "Bearer sessao_valida_lari_premium"}), 200
     else:
         return jsonify({"authenticated": False, "error": "Senha incorreta."}), 401
-
 # ======================================================================
 # 2. PROVEDOR DE ARMAZENAMENTO DE MÍDIA (VERCEL BLOB STORAGE)
 # ======================================================================
