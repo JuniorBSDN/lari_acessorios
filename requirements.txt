@@ -2,4 +2,4 @@ Flask==3.0.0
 pytz
 flask-cors
 psycopg2-binary
-fpdf==1.7.2
+requests
