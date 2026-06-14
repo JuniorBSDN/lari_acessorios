@@ -1,5 +1,5 @@
 Flask==3.0.0
 pytz
 flask-cors
-psycopg2-binary
+psycopg2-binary==2.9.9
 requests
