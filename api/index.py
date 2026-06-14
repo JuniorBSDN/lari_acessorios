@@ -46,9 +46,13 @@ def inicializar_infraestrutura_banco():
             print(f"⚠️ Inicialização do banco: {str(e)}")
 
 
+# Inicializa a estrutura antes de subir as rotas
 inicializar_infraestrutura_banco()
 
 
+# ======================================================================
+# ROTEAMENTO DE ARQUIVOS ESTÁTICOS
+# ======================================================================
 @app.route("/")
 def index():
     return send_from_directory('../../public', 'index.html')
@@ -59,8 +63,11 @@ def servir_arquivos_estaticos(path):
     return send_from_directory('../../public', path)
 
 
-@app.route("/api/login", methods=["POST"])
-def login_admin():
+# ======================================================================
+# ENDPOINT DE AUTENTICAÇÃO DO ADMINISTRADOR
+# ======================================================================
+@app.route("/api/admin/login", methods=["POST"])
+def login_administrador():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
 
@@ -70,12 +77,20 @@ def login_admin():
     if not ADMIN_PASSWORD:
         return jsonify({"authenticated": False, "error": "ADMIN_PASSWORD não configurada na Vercel."}), 500
 
+    # Valida contra a variável de ambiente segura configurada na Vercel
     if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
-        return jsonify({"authenticated": True, "token": "Bearer sessao_valida_lari_premium"}), 200
+        return jsonify({
+            "authenticated": True,
+            "status": "success",
+            "token": "Bearer sessao_valida_lari_premium"
+        }), 200
 
-    return jsonify({"authenticated": False, "error": "Senha incorreta."}), 401
+    return jsonify({"authenticated": False, "error": "Senha incorreta!"}), 401
 
 
+# ======================================================================
+# ENDPOINT DE UPLOAD DE FOTO (VERCEL BLOB)
+# ======================================================================
 @app.route("/api/upload", methods=["POST"])
 def upload_foto():
     token_sessao = request.headers.get("Authorization")
@@ -112,6 +127,9 @@ def upload_foto():
         return jsonify({"error": str(e)}), 500
 
 
+# ======================================================================
+# ENDPOINT DE GERENCIAMENTO DE PRODUTOS (GET / POST)
+# ======================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
     if request.method == "POST":
@@ -164,6 +182,9 @@ def gerenciar_produtos():
         return jsonify({"error": str(e)}), 500
 
 
+# ======================================================================
+# ENDPOINT DE EXCLUSÃO DE PRODUTO (DELETE)
+# ======================================================================
 @app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
     token_sessao = request.headers.get("Authorization")
@@ -183,6 +204,9 @@ def remover_produto_banco(id_prod):
         return jsonify({"error": str(e)}), 500
 
 
+# ======================================================================
+# MANIPULADOR DE ERRO GLOBAL (404)
+# ======================================================================
 @app.errorhandler(404)
 def rota_nao_encontrada(e):
     return jsonify({"error": "Endpoint não encontrado no subsistema de backend.", "status": "API Ativa"}), 404
