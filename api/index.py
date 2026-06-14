@@ -70,21 +70,12 @@ def login_administrador():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
 
-    if not senha_enviada:
-        return jsonify({"authenticated": False, "error": "Senha não informada."}), 400
-
-    if not ADMIN_PASSWORD:
-        return jsonify({"authenticated": False, "error": "ADMIN_PASSWORD não configurada na Vercel."}), 500
-
-    # Valida contra a variável de ambiente segura configurada na Vercel
-    if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
-        return jsonify({
-            "authenticated": True,
-            "status": "success", 
-            "token": "Bearer sessao_valida_lari_premium"
-        }), 200
+    # Valida estritamente contra a variável de ambiente segura configurada na Vercel
+    if ADMIN_PASSWORD and senha_enviada == ADMIN_PASSWORD:
+        # Retorna o formato exato original que o frontend trata
+        return jsonify({"status": "success", "token": "sessao_valida_lari_premium"}), 200
     
-    return jsonify({"authenticated": False, "error": "Senha incorreta!"}), 401
+    return jsonify({"error": "Senha incorreta!"}), 401
 
 
 # ======================================================================
