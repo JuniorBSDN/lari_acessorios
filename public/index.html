@@ -331,18 +331,20 @@
                 if (produtoAntigo) urlFinalFoto = produtoAntigo.foto;
             }
 
-            // Se o usuário adicionou uma imagem nova no input
             if(file) {
                 const formData = new FormData();
                 formData.append('foto', file);
                 try {
+                    // O navegador trata de gerar o Content-Type correto com o boundary isolado para o FormData
                     const uploadResponse = await fetch('/api/upload', {
                         method: 'POST',
-                        headers: { 'Authorization': tokenSessao },
+                        headers: {
+                            'Authorization': tokenSessao
+                        },
                         body: formData
                     });
                     const uploadResult = await uploadResponse.json();
-                    if(!uploadResponse.ok) throw new Error(uploadResult.error || "Erro de transferência");
+                    if(!uploadResponse.ok) throw new Error(uploadResult.error || "Erro de envio");
                     urlFinalFoto = uploadResult.url;
                 } catch (err) {
                     alert("Falha no upload da imagem: " + err.message);
@@ -372,7 +374,7 @@
                     alert("Erro ao gravar produto: " + (errRes.error || "Rejeitado pelo servidor"));
                 }
             } catch (err) {
-                alert("Erro na comunicação de rede com o servidor.");
+                alert("Erro na comunicação com o servidor backend.");
             }
         }
 
@@ -701,7 +703,7 @@
 
             msg += `\n💰 *Total do Pedido:* R$ ${totalGeral.toFixed(2)}`;
 
-            const numeroAdmin = "5591999999999"; // Substitua pelo número real da marca com DDD
+            const numeroAdmin = "5591983252639"; // Substitua pelo número real da marca com DDD
             window.open(`https://api.whatsapp.com/send?phone=${numeroAdmin}&text=${encodeURIComponent(msg)}`, '_blank');
 
             cart = {};
