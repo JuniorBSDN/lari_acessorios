@@ -5,7 +5,6 @@ import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Configuração integrada com a estrutura da Vercel
 app = Flask(__name__, static_folder='../public', static_url_path='')
 CORS(app)
 
@@ -15,10 +14,9 @@ DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") 
 
 def obter_conexao():
     if not DATABASE_URL:
-        raise ValueError("A string de conexão com o banco de dados não foi configurada na Vercel.")
-    # Força modo autocommit absoluto para evitar locks em funções serverless
+        raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    conn.autocommit = True
+    conn.autocommit = True  # Evita travar transações (Locks) na Vercel
     return conn
 
 def inicializar_infraestrutura_banco():
@@ -38,11 +36,10 @@ def inicializar_infraestrutura_banco():
             """)
             cursor.close()
             conn.close()
-            print("🚀 Infraestrutura do banco PostgreSQL verificada com sucesso.")
+            print("🚀 Banco de dados mapeado e pronto.")
         except Exception as e:
-            print(f"⚠️ Aviso na inicialização do banco: {str(e)}")
+            print(f"⚠️ Inicialização pendente ou erro no banco: {str(e)}")
 
-# Inicializa no carregamento do contêiner efêmero
 inicializar_infraestrutura_banco()
 
 @app.route("/")
@@ -50,26 +47,23 @@ def index():
     return send_from_directory('../public', 'index.html')
 
 # ======================================================================
-# 1. CONTROLE DE AUTENTICAÇÃO
+# 1. AUTENTICAÇÃO
 # ======================================================================
 @app.route("/api/login", methods=["POST"])
 def login_admin():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
-
     if not senha_enviada:
         return jsonify({"authenticated": False, "error": "Senha não informada."}), 400
-
     if not ADMIN_PASSWORD:
-        return jsonify({"authenticated": False, "error": "Senha administrativa não configurada na Vercel."}), 500
-
+        return jsonify({"authenticated": False, "error": "Senha não configurada na Vercel."}), 500
+    
     if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
         return jsonify({"authenticated": True, "token": "Bearer sessao_valida_lari_premium"}), 200
-    
     return jsonify({"authenticated": False, "error": "Senha incorreta."}), 401
 
 # ======================================================================
-# 2. UPLOAD DE MÍDIA (VERCEL BLOB STORAGE)
+# 2. UPLOAD DE FOTO
 # ======================================================================
 @app.route("/api/upload", methods=["POST"])
 def upload_foto():
@@ -89,9 +83,6 @@ def upload_foto():
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
 
-    if not VERCEL_BLOB_READ_WRITE_TOKEN:
-        return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente."}), 500
-
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
         "x-api-version": "1",
@@ -107,7 +98,7 @@ def upload_foto():
         return jsonify({"error": str(e)}), 500
 
 # ======================================================================
-# 3. GESTÃO DOS REGISTROS (GET E POST)
+# 3. PRODUTOS (GET / POST)
 # ======================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
@@ -125,7 +116,7 @@ def gerenciar_produtos():
         visivel = dados.get("visivel") if dados.get("visivel") is not None else True
 
         if not id_produto or not nome or preco is None:
-            return jsonify({"error": "Metadados essenciais incompletos."}), 400
+            return jsonify({"error": "Metadados incompletos."}), 400
 
         try:
             conn = obter_conexao()
@@ -143,7 +134,7 @@ def gerenciar_produtos():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    # Tratamento GET
+    # GET
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
@@ -159,7 +150,7 @@ def gerenciar_produtos():
         return jsonify({"error": str(e)}), 500
 
 # ======================================================================
-# 4. REMOÇÃO FLEXÍVEL DE PRODUTO (RESOLVE O 404/500 DE VEZ)
+# 4. EXCLUSÃO DEFINITIVA (ACEITA EXTENSÕES E CARACTERES NO ID)
 # ======================================================================
 @app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
@@ -177,11 +168,8 @@ def remover_produto_banco(id_prod):
         conn.close()
         return jsonify({"status": "success", "message": f"Produto {id_limpo} removido."}), 200
     except Exception as e:
-        return jsonify({"error": f"Erro interno no banco: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.errorhandler(404)
 def rota_nao_encontrada(e):
-    return jsonify({
-        "error": "Endpoint não encontrado no subsistema de backend.",
-        "status": "API Ativa"
-    }), 404
+    return jsonify({"error": "Endpoint não encontrado no subsistema de backend.", "status": "API Ativa"}), 404
