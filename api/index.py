@@ -5,22 +5,25 @@ import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Configuração do Flask adaptada para a estrutura de pastas da Vercel
+# Configuração rigorosa do Flask integrada com a arquitetura de pastas da Vercel
 app = Flask(__name__, static_folder='../public', static_url_path='')
 CORS(app)
 
+# Variáveis de ambiente mapeadas do painel da Vercel
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-
 DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
 
 def obter_conexao():
     if not DATABASE_URL:
         raise ValueError("A string de conexão com o banco de dados (POSTGRES_URL) não foi configurada na Vercel.")
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    # Força autocommit=True para evitar transações presas (Locks) em funções Serverless
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn.autocommit = True
+    return conn
 
 def inicializar_infraestrutura_banco():
-    """Inicializa as tabelas de forma segura sem sobrecarregar as rotas serverless"""
+    """Garante a existência da tabela na subida do contentor, sem sobrecarregar as rotas"""
     if DATABASE_URL:
         try:
             conn = obter_conexao()
@@ -35,16 +38,13 @@ def inicializar_infraestrutura_banco():
                     visivel BOOLEAN DEFAULT TRUE
                 );
             """)
-            conn.commit()
             cursor.close()
             conn.close()
             print("🚀 Infraestrutura do banco PostgreSQL verificada com sucesso.")
-            return True
         except Exception as e:
-            print(f"⚠️ Aviso: Conexão com o banco falhou ou está pendente: {str(e)}")
-    return False
+            print(f"⚠️ Aviso na inicialização do banco: {str(e)}")
 
-# Tenta inicializar uma vez no carregamento do módulo global do contêiner (reduz overhead)
+# Inicializa o banco uma única vez no carregamento global do script
 inicializar_infraestrutura_banco()
 
 @app.route("/")
@@ -55,7 +55,6 @@ def index():
 # 1. CONTROLE DE AUTENTICAÇÃO DO ADMINISTRADOR
 # ======================================================================
 @app.route("/api/login", methods=["POST"])
-@app.route("/login", methods=["POST"])
 def login_admin():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
@@ -74,7 +73,6 @@ def login_admin():
 # ======================================================================
 # 2. PROVEDOR DE ARMAZENAMENTO DE MÍDIA (VERCEL BLOB STORAGE)
 # ======================================================================
-@app.route("/upload", methods=["POST"])
 @app.route("/api/upload", methods=["POST"])
 def upload_foto():
     token_sessao = request.headers.get("Authorization")
@@ -88,42 +86,35 @@ def upload_foto():
     if file.filename == '':
         return jsonify({"error": "Nome de arquivo inválido."}), 400
 
-    # Detecta a extensão e o Content-Type correto para a API da Vercel
     ext = os.path.splitext(file.filename)[1].lower()
     content_type = file.content_type or "application/octet-stream"
-    
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
         return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente nas variáveis de ambiente."}), 500
 
-    # Adicionados cabeçalhos obrigatórios e recomendados para a API REST da Vercel Store
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
         "x-api-version": "1",
-        "x-add-random-suffix": "1",  # Evita colisões de arquivos com o mesmo nome
         "Content-Type": content_type
     }
-    
     url_destino_blob = f"https://blob.vercel-storage.com/{nome_id}"
 
     try:
         resposta_vercel = requests.put(url_destino_blob, data=conteudo_binario, headers=headers)
         if resposta_vercel.status_code == 200:
             dados_retorno = resposta_vercel.json()
-            # Retorna a URL pública fornecida pela infraestrutura da Vercel
             return jsonify({"url": dados_retorno["url"]}), 200
         else:
-            return jsonify({"error": f"Erro na API da Vercel Blob: {resposta_vercel.text}"}), 500
+            return jsonify({"error": f"Erro na API da Vercel: {resposta_vercel.text}"}), 500
     except Exception as e:
         return jsonify({"error": f"Falha de comunicação interna de mídia: {str(e)}"}), 500
 
 # ======================================================================
-# 3. GESTÃO DOS REGISTROS DOS PRODUTOS
+# 3. GESTÃO DOS REGISTROS DOS PRODUTOS (GET E POST)
 # ======================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
-@app.route("/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
     if request.method == "POST":
         token_sessao = request.headers.get("Authorization")
@@ -154,7 +145,6 @@ def gerenciar_produtos():
                 SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
                     categoria = EXCLUDED.categoria, foto = EXCLUDED.foto, visivel = EXCLUDED.visivel;
             """, (id_produto, nome, float(preco), categoria, foto, bool(visivel)))
-            conn.commit()
             cursor.close()
             conn.close()
             return jsonify({"status": "success", "message": "Dados sincronizados com o Postgres."}), 201
@@ -177,12 +167,11 @@ def gerenciar_produtos():
             r['preco'] = float(r['preco'])
         return jsonify(registros), 200
     except Exception as e:
-        # Se por acaso a tabela sumir ou o banco reiniciar, tenta recriar em segundo plano
-        inicializar_infraestrutura_banco()
         return jsonify({"error": f"Falha ao consultar banco: {str(e)}"}), 500
 
-
-@app.route("/produtos/<id_prod>", methods=["DELETE"])
+# ======================================================================
+# 4. REMOÇÃO DOS PRODUTOS (DELETE)
+# ======================================================================
 @app.route("/api/produtos/<id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
     token_sessao = request.headers.get("Authorization")
@@ -192,14 +181,12 @@ def remover_produto_banco(id_prod):
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM produtos WHERE id_produto = %s;", (id_prod,))
-        conn.commit()
+        cursor.execute("DELETE FROM produtos WHERE id_produto = %s;", (str(id_prod).strip(),))
         cursor.close()
         conn.close()
         return jsonify({"status": "success", "message": "Registro removido."}), 200
     except Exception as e:
         return jsonify({"error": f"Erro ao remover do banco: {str(e)}"}), 500
-
 
 # Manipulador global de erros para rotas inexistentes
 @app.errorhandler(404)
