@@ -11,8 +11,7 @@ CORS(app)
 
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
-    "POSTGRES_URL_NON_POOLING")
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
 
 
 def obter_conexao():
@@ -81,10 +80,10 @@ def login_administrador():
     if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
         return jsonify({
             "authenticated": True,
-            "status": "success",
+            "status": "success", 
             "token": "Bearer sessao_valida_lari_premium"
         }), 200
-
+    
     return jsonify({"authenticated": False, "error": "Senha incorreta!"}), 401
 
 
