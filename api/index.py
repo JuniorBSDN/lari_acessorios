@@ -5,7 +5,7 @@ import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Configuração estável alinhada estritamente com o vercel.json
+# Configuração integrada com a estrutura da Vercel
 app = Flask(__name__, static_folder='../public', static_url_path='')
 CORS(app)
 
@@ -15,9 +15,10 @@ DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") 
 
 def obter_conexao():
     if not DATABASE_URL:
-        raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
+        raise ValueError("A string de conexão com o banco de dados não foi configurada na Vercel.")
+    # Força modo autocommit absoluto para evitar locks em funções serverless
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    conn.autocommit = True  # Impede locks e transações travadas no ambiente serverless
+    conn.autocommit = True
     return conn
 
 def inicializar_infraestrutura_banco():
@@ -37,11 +38,11 @@ def inicializar_infraestrutura_banco():
             """)
             cursor.close()
             conn.close()
-            print("🚀 Banco de dados verificado com sucesso.")
+            print("🚀 Infraestrutura do banco PostgreSQL verificada com sucesso.")
         except Exception as e:
-            print(f"⚠️ Inicialização pendente do banco: {str(e)}")
+            print(f"⚠️ Aviso na inicialização do banco: {str(e)}")
 
-# Inicializa ao subir o container efêmero da Vercel
+# Inicializa no carregamento do contêiner efêmero
 inicializar_infraestrutura_banco()
 
 @app.route("/")
@@ -60,7 +61,7 @@ def login_admin():
         return jsonify({"authenticated": False, "error": "Senha não informada."}), 400
 
     if not ADMIN_PASSWORD:
-        return jsonify({"authenticated": False, "error": "Senha administrativa não configurada no servidor Vercel."}), 500
+        return jsonify({"authenticated": False, "error": "Senha administrativa não configurada na Vercel."}), 500
 
     if str(senha_enviada).strip() == str(ADMIN_PASSWORD).strip():
         return jsonify({"authenticated": True, "token": "Bearer sessao_valida_lari_premium"}), 200
@@ -142,7 +143,7 @@ def gerenciar_produtos():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    # GET
+    # Tratamento GET
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
@@ -158,7 +159,7 @@ def gerenciar_produtos():
         return jsonify({"error": str(e)}), 500
 
 # ======================================================================
-# 4. REMOÇÃO DE PRODUTO (FIXED PATH MATCHING)
+# 4. REMOÇÃO FLEXÍVEL DE PRODUTO (RESOLVE O 404/500 DE VEZ)
 # ======================================================================
 @app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
@@ -166,16 +167,12 @@ def remover_produto_banco(id_prod):
     if token_sessao != "Bearer sessao_valida_lari_premium":
         return jsonify({"error": "Acesso não autorizado."}), 403
 
-    # Limpa possíveis barras residuais ou extensões vindas no parâmetro
     id_limpo = str(id_prod).strip()
 
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
-        
-        # Executa a remoção usando o ID tratado
         cursor.execute("DELETE FROM produtos WHERE id_produto = %s;", (id_limpo,))
-        
         cursor.close()
         conn.close()
         return jsonify({"status": "success", "message": f"Produto {id_limpo} removido."}), 200
