@@ -151,6 +151,9 @@
                 <button onclick="switchView('client')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-400 hover:text-white border border-neutral-800 px-4 py-2 rounded-lg transition-colors">
                     <span class="material-symbols-rounded text-sm">arrow_back</span> Voltar à Vitrine
                 </button>
+                <button onclick="logoutAdmin()">
+                    Sair
+                </button>
             </div>
         </header>
 
@@ -317,8 +320,23 @@
             const preco = parseFloat(document.getElementById('prod-preco').value);
             const categoria = document.getElementById('prod-categoria').value;
             const fileInput = document.getElementById('prod-file');
-            const file = fileInput.files[0];
+           if(file){
+    const permitidos = [
+        'image/jpeg',
+        'image/png',
+        'image/webp'
+    ];
 
+    if(!permitidos.includes(file.type)){
+        alert('Formato inválido. Use JPG, PNG ou WEBP.');
+        return;
+    }
+
+    if(file.size > 5 * 1024 * 1024){
+        alert('Imagem maior que 5MB.');
+        return;
+    }
+}
             if(!nome || isNaN(preco)) {
                 alert('Preencha os campos obrigatórios corretamente.');
                 return;
@@ -707,6 +725,7 @@
             window.open(`https://api.whatsapp.com/send?phone=${numeroAdmin}&text=${encodeURIComponent(msg)}`, '_blank');
 
             cart = {};
+            localStorage.removeItem('cart');
             atualizarInterfaceCarrinho();
             toggleCheckoutModal();
             limparFormulario();
@@ -714,6 +733,37 @@
 
         // Inicialização global da aplicação
         carregarProdutosDoBanco();
+
+if(Object.keys(cart).length > 0){
+    atualizarInterfaceCarrinho();
+}
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+    const senhaInput = document.getElementById('admin-password-input');
+
+    if(senhaInput){
+        senhaInput.addEventListener('keydown', function(e){
+            if(e.key === 'Enter'){
+                autenticarAdmin();
+            }
+        });
+    }
+
+});
+
+        function logoutAdmin(){
+
+    tokenSessao = null;
+
+    localStorage.removeItem('token');
+
+    document.getElementById('view-admin')
+        .classList.replace('block', 'hidden');
+
+    document.getElementById('view-client')
+        .classList.replace('hidden', 'block');
+}
     </script>
 </body>
 </html>
