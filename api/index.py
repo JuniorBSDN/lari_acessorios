@@ -58,27 +58,39 @@ def servir_arquivos_estaticos(path):
 
 
 # ======================================================================
-# ENDPOINT DE AUTENTICAÇÃO DO ADMINISTRADOR
+# LOGIN ADMIN
 # ======================================================================
+@app.route("/api/login", methods=["POST"])
 @app.route("/api/admin/login", methods=["POST"])
 def login_administrador():
     dados = request.get_json() or {}
-    senha_enviada = dados.get("senha")
+    senha = str(dados.get("senha", "")).strip()
 
-    if ADMIN_PASSWORD and senha_enviada == ADMIN_PASSWORD:
-        return jsonify({"status": "success", "token": "sessao_valida_lari_premium"}), 200
-    
-    return jsonify({"error": "Senha incorreta!"}), 401
+    if not ADMIN_PASSWORD:
+        return jsonify({
+            "authenticated": False,
+            "error": "ADMIN_PASSWORD não configurada."
+        }), 500
 
+    if senha == ADMIN_PASSWORD:
+        return jsonify({
+            "authenticated": True,
+            "status": "success",
+            "token": "Bearer sessao_valida_lari_premium"
+        }), 200
+
+    return jsonify({
+        "authenticated": False,
+        "error": "Senha incorreta."
+    }), 401
 
 # ======================================================================
 # ENDPOINT DE UPLOAD DE FOTO (VERCEL BLOB)
 # ======================================================================
 @app.route("/api/upload", methods=["POST"])
 def upload_foto():
-    token_sessao = request.headers.get("Authorization")
-    if token_sessao != "Bearer sessao_valida_lari_premium":
-        return jsonify({"error": "Acesso não autorizado."}), 403
+    if not validar_sessao():
+    return jsonify({"error": "Acesso não autorizado."}), 403
 
     if 'foto' not in request.files:
         return jsonify({"error": "Nenhum arquivo de imagem enviado."}), 400
@@ -88,9 +100,28 @@ def upload_foto():
         return jsonify({"error": "Nome de arquivo inválido."}), 400
 
     ext = os.path.splitext(file.filename)[1].lower()
+
+    permitidos = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp"
+    }
+
+if ext not in permitidos:
+    return jsonify({
+        "error": "Formato inválido."
+    }), 400
+    
+    
     content_type = file.content_type or "application/octet-stream"
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
+    if len(conteudo_binario) > 5 * 1024 * 1024:
+    return jsonify({
+        "error": "Imagem maior que 5MB."
+    }), 400
+    
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
         return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente."}), 500
