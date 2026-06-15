@@ -17,7 +17,7 @@ DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") 
 def obter_conexao():
     if not DATABASE_URL:
         raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn = psycopg2.connect(DATABASE_URL, sslmode="require", cursor_factory=RealDictCursor)
     conn.autocommit = True
     return conn
 
