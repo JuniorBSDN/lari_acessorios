@@ -21,6 +21,10 @@ def obter_conexao():
     conn.autocommit = True
     return conn
 
+def validar_sessao():
+    token = request.headers.get("Authorization", "").strip()
+    return token == "Bearer sessao_valida_lari_premium"
+
 
 def inicializar_infraestrutura_banco():
     if DATABASE_URL:
@@ -90,7 +94,7 @@ def login_administrador():
 @app.route("/api/upload", methods=["POST"])
 def upload_foto():
     if not validar_sessao():
-    return jsonify({"error": "Acesso não autorizado."}), 403
+        return jsonify({"error": "Acesso não autorizado."}), 403
 
     if 'foto' not in request.files:
         return jsonify({"error": "Nenhum arquivo de imagem enviado."}), 400
@@ -108,19 +112,19 @@ def upload_foto():
         ".webp"
     }
 
-if ext not in permitidos:
-    return jsonify({
-        "error": "Formato inválido."
-    }), 400
+    if ext not in permitidos:
+        return jsonify({
+            "error": "Formato inválido."
+        }), 400
     
     
     content_type = file.content_type or "application/octet-stream"
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
     if len(conteudo_binario) > 5 * 1024 * 1024:
-    return jsonify({
-        "error": "Imagem maior que 5MB."
-    }), 400
+        return jsonify({
+            "error": "Imagem maior que 5MB."
+        }), 400
     
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
@@ -198,10 +202,9 @@ def gerenciar_produtos():
 # ======================================================================
 # ENDPOINT DE EXCLUSÃO DE PRODUTO (DELETE)
 # ======================================================================
-@app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
+@app.route("/api/produtos/<string:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
-    token_sessao = request.headers.get("Authorization")
-    if token_sessao != "Bearer sessao_valida_lari_premium":
+    if not validar_sessao():
         return jsonify({"error": "Acesso não autorizado."}), 403
 
     id_limpo = str(id_prod).strip()
