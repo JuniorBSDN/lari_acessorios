@@ -148,12 +148,14 @@
                 <div>
                     <h2 class="font-luxury text-xl md:text-2xl tracking-widest text-white uppercase">LariAcessórios <span class="text-xs font-sans text-gold font-light tracking-normal ml-2">Módulo Management</span></h2>
                 </div>
-                <button onclick="switchView('client')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-400 hover:text-white border border-neutral-800 px-4 py-2 rounded-lg transition-colors">
-                    <span class="material-symbols-rounded text-sm">arrow_back</span> Voltar à Vitrine
-                </button>
-                <button onclick="logoutAdmin()">
-                    Sair
-                </button>
+                <div class="flex items-center gap-4">
+                    <button onclick="switchView('client')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-400 hover:text-white border border-neutral-800 px-4 py-2 rounded-lg transition-colors">
+                        <span class="material-symbols-rounded text-sm">arrow_back</span> Voltar à Vitrine
+                    </button>
+                    <button onclick="logoutAdmin()" class="text-xs tracking-wider uppercase font-medium text-red-400 hover:text-red-500 transition-colors">
+                        Sair
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -245,25 +247,25 @@
         </div>
     </div>
 
-    <!-- MODAL DE CHECKOUT (SACLA DE COMPRAS) -->
+    <!-- MODAL DE CHECKOUT (SACOLA DE COMPRAS) -->
     <div id="checkout-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center md:justify-end">
         <div class="bg-white border-t md:border-t-0 md:border-l border-neutral-200 w-full max-w-md h-[90vh] md:h-screen rounded-t-2xl md:rounded-t-none p-6 space-y-6 overflow-y-auto shadow-2xl flex flex-col justify-between">
-            <div>
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-4">
+            <div class="flex flex-col h-full overflow-hidden">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-4 shrink-0">
                     <h2 class="font-luxury text-xl tracking-wider text-black uppercase">Sua Sacola</h2>
                     <button onclick="toggleCheckoutModal()" class="p-1 rounded-full bg-neutral-100 text-neutral-500 hover:text-black transition-colors">
                         <span class="material-symbols-rounded">close</span>
                     </button>
                 </div>
-                <div id="cart-items-list" class="space-y-4 divide-y divide-neutral-100 max-h-[30vh] overflow-y-auto pr-1 mt-4"></div>
-                <div class="space-y-3 pt-6">
+                <div id="cart-items-list" class="space-y-4 divide-y divide-neutral-100 overflow-y-auto pr-1 mt-4 flex-1"></div>
+                <div class="space-y-3 pt-6 shrink-0 border-t border-neutral-100 mt-auto">
                     <h4 class="text-[10px] tracking-widest text-neutral-400 uppercase font-bold">Informações de Envio</h4>
                     <input type="text" id="client-name" placeholder="Seu nome completo" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light">
                     <input type="text" id="client-phone" placeholder="WhatsApp para contato" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light">
                     <textarea id="client-address" placeholder="Endereço de Entrega ou Retirada" rows="2" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light"></textarea>
                 </div>
             </div>
-            <div class="border-t border-neutral-100 pt-4 bg-white sticky bottom-0">
+            <div class="border-t border-neutral-100 pt-4 bg-white shrink-0">
                 <div class="flex justify-between items-center mb-4 text-sm font-semibold">
                     <span>Total do Pedido:</span>
                     <span id="modal-total-value" class="text-lg font-bold text-black">R$ 0,00</span>
@@ -298,6 +300,10 @@
         let currentSearchGlobal = '';
         let tokenSessao = null;
 
+        document.addEventListener("DOMContentLoaded", () => {
+            carregarProdutosDoBanco();
+        });
+
         async function carregarProdutosDoBanco() {
             try {
                 const response = await fetch('/api/produtos');
@@ -321,18 +327,19 @@
             const categoria = document.getElementById('prod-categoria').value;
             const fileInput = document.getElementById('prod-file');
             const file = fileInput.files[0];
-            if(file){const permitidos = ['image/jpeg','image/png','image/webp'];
 
-    if(!permitidos.includes(file.type)){
-        alert('Formato inválido. Use JPG, PNG ou WEBP.');
-        return;
-    }
+            if(file){
+                const permitidos = ['image/jpeg','image/png','image/webp'];
+                if(!permitidos.includes(file.type)){
+                    alert('Formato inválido. Use JPG, PNG ou WEBP.');
+                    return;
+                }
+                if(file.size > 5 * 1024 * 1024){
+                    alert('Imagem maior que 5MB.');
+                    return;
+                }
+            }
 
-    if(file.size > 5 * 1024 * 1024){
-        alert('Imagem maior que 5MB.');
-        return;
-    }
-}
             if(!nome || isNaN(preco)) {
                 alert('Preencha os campos obrigatórios corretamente.');
                 return;
@@ -349,12 +356,9 @@
                 const formData = new FormData();
                 formData.append('foto', file);
                 try {
-                    // O navegador trata de gerar o Content-Type correto com o boundary isolado para o FormData
                     const uploadResponse = await fetch('/api/upload', {
                         method: 'POST',
-                        headers: {
-                            'Authorization': tokenSessao
-                        },
+                        headers: { 'Authorization': tokenSessao },
                         body: formData
                     });
                     const uploadResult = await uploadResponse.json();
@@ -435,7 +439,6 @@
             document.getElementById('prod-file').value = '';
             document.getElementById('form-title').innerText = "Curar Novo Acessório";
             document.getElementById('btn-cancelar').classList.add('hidden');
-
             document.getElementById('upload-placeholder-view').classList.remove('hidden');
             document.getElementById('upload-preview-container').classList.replace('flex', 'hidden');
         }
@@ -499,7 +502,6 @@
                     tokenSessao = resultado.token;
                     document.getElementById('login-modal').classList.add('hidden');
                     senhaInput.value = '';
-
                     document.getElementById('view-client').classList.replace('block', 'hidden');
                     document.getElementById('view-admin').classList.replace('hidden', 'block');
                     renderAdminTable();
@@ -510,6 +512,11 @@
                 console.error(err);
                 alert("Erro ao conectar com o servidor de autenticação. Verifique suas rotas.");
             }
+        }
+
+        function logoutAdmin() {
+            tokenSessao = null;
+            switchView('client');
         }
 
         function renderClientProducts(searchQuery = '') {
@@ -532,20 +539,21 @@
                 grid.innerHTML += `
                     <div class="group bg-white border border-neutral-100 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-500 flex flex-col justify-between">
                         <div class="relative overflow-hidden aspect-square bg-neutral-50">
-                            <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                            <span class="absolute top-3 left-3 bg-white/80 backdrop-blur-md text-[9px] uppercase tracking-widest font-bold px-2 py-1 rounded-md text-neutral-600 border border-neutral-100">${p.categoria}</span>
+                            <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                         </div>
                         <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
                             <div>
-                                <h4 class="text-xs font-medium text-neutral-800 line-clamp-2 min-h-[2rem]">${p.nome}</h4>
-                                <p class="font-luxury text-sm font-bold text-black mt-1">R$ ${parseFloat(p.preco).toFixed(2).replace('.', ',')}</p>
+                                <h4 class="text-xs text-neutral-400 uppercase tracking-widest">${p.categoria}</h4>
+                                <h3 class="font-medium text-neutral-800 text-sm line-clamp-2">${p.nome}</h3>
                             </div>
-                            <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="w-full bg-neutral-50 hover:bg-black hover:text-white text-neutral-800 text-[10px] tracking-wider uppercase font-bold py-3 rounded-xl border border-neutral-200 hover:border-black transition-all duration-300 flex items-center justify-center gap-1.5 mt-2">
-                                <span class="material-symbols-rounded text-sm">shopping_bag</span> Adicionar
-                            </button>
+                            <div class="flex items-center justify-between pt-2 border-t border-neutral-50">
+                                <span class="text-neutral-900 font-bold text-sm">R$ ${p.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <button onclick="addToCart('${p.id_produto}')" class="bg-black hover:bg-neutral-800 text-white p-2 rounded-xl flex items-center justify-center transition-colors">
+                                    <span class="material-symbols-rounded text-sm text-gold">add_shopping_cart</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
         }
 
@@ -553,137 +561,120 @@
             const tbody = document.getElementById('admin-table-body');
             tbody.innerHTML = '';
 
-            if(datasetProducts.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-neutral-400 font-light">Nenhum item cadastrado.</td></tr>`;
-                return;
-            }
-
             datasetProducts.forEach(p => {
                 tbody.innerHTML += `
                     <tr class="hover:bg-neutral-50/80 transition-colors">
-                        <td class="py-4 flex items-center gap-3 font-medium text-neutral-900">
-                            <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-200 shadow-sm flex-shrink-0">
-                            <span class="truncate max-w-[180px] block">${p.nome}</span>
+                        <td class="py-3.5 flex items-center gap-3 font-medium text-neutral-800">
+                            <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-200">
+                            <span class="truncate max-w-[180px]">${p.nome}</span>
                         </td>
-                        <td class="py-4 text-neutral-500 capitalize">${p.categoria}</td>
-                        <td class="py-4 font-bold text-black">R$ ${parseFloat(p.preco).toFixed(2)}</td>
-                        <td class="py-4 text-center">
-                            <button onclick="toggleVisibilidade('${p.id_produto}')" class="p-1 rounded-md ${p.visivel ? 'text-emerald-600 bg-emerald-50' : 'text-neutral-400 bg-neutral-100'} hover:scale-110 transition-transform">
-                                <span class="material-symbols-rounded text-lg">${p.visivel ? 'visibility' : 'visibility_off'}</span>
+                        <td class="py-3.5 text-neutral-500 uppercase tracking-wider text-[10px] font-semibold">${p.categoria}</td>
+                        <td class="py-3.5 font-bold text-neutral-900">R$ ${p.preco.toFixed(2)}</td>
+                        <td class="py-3.5 text-center">
+                            <button onclick="toggleVisibilidade('${p.id_produto}')" class="p-1 rounded-md text-xl transition-colors ${p.visivel ? 'text-emerald-500 hover:text-emerald-600' : 'text-neutral-300 hover:text-neutral-400'}">
+                                <span class="material-symbols-rounded">${p.visivel ? 'visibility' : 'visibility_off'}</span>
                             </button>
                         </td>
-                        <td class="py-4 text-right space-x-1">
-                            <button onclick="prepararEdicao('${p.id_produto}')" class="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-md transition-colors"><span class="material-symbols-rounded text-base">edit</span></button>
-                            <button onclick="removerProduto('${p.id_produto}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><span class="material-symbols-rounded text-base">delete</span></button>
+                        <td class="py-3.5 text-right space-x-1">
+                            <button onclick="carregarProdutoParaEdicao('${p.id_produto}')" class="p-1 text-neutral-400 hover:text-black transition-colors"><span class="material-symbols-rounded text-sm">edit</span></button>
+                            <button onclick="removerProduto('${p.id_produto}')" class="p-1 text-neutral-400 hover:text-red-500 transition-colors"><span class="material-symbols-rounded text-sm">delete</span></button>
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
             });
         }
 
-        function prepararEdicao(id) {
+        function carregarProdutoParaEdicao(id) {
             const p = datasetProducts.find(item => String(item.id_produto) === String(id));
             if(p) {
                 document.getElementById('prod-id').value = p.id_produto;
                 document.getElementById('prod-nome').value = p.nome;
                 document.getElementById('prod-preco').value = p.preco;
                 document.getElementById('prod-categoria').value = p.categoria;
-
-                document.getElementById('form-title').innerText = "Editar Peça de Acervo";
+                document.getElementById('form-title').innerText = "Editar Acessório";
                 document.getElementById('btn-cancelar').classList.remove('hidden');
 
-                document.getElementById('upload-placeholder-view').classList.add('hidden');
-                const previewContainer = document.getElementById('upload-preview-container');
-                previewContainer.classList.remove('hidden');
-                previewContainer.classList.add('flex');
+                document.getElementById('upload-placeholder-view').class_list = 'hidden';
+                const containerPreview = document.getElementById('upload-preview-container');
+                containerPreview.classList.remove('hidden');
+                containerPreview.classList.add('flex');
                 document.getElementById('upload-preview-img').src = p.foto;
-
-                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
 
-        function atualizarDashboardMetricas() {
-            const totalItens = datasetProducts.length;
-            const somaValores = datasetProducts.reduce((acc, p) => acc + parseFloat(p.preco), 0);
-
-            document.getElementById('dash-pedidos').innerText = totalItens;
-            document.getElementById('dash-faturamento').innerText = `R$ ${somaValores.toFixed(2).replace('.', ',')}`;
-        }
-
-        function syncSearch(value) {
-            currentSearchGlobal = value;
-            document.getElementById('search-input-pc').value = value;
-            document.getElementById('search-input-mobile').value = value;
-            renderClientProducts(value);
+        function syncSearch(val) {
+            currentSearchGlobal = val;
+            document.getElementById('search-input-pc').value = val;
+            document.getElementById('search-input-mobile').value = val;
+            renderClientProducts(val);
         }
 
         function filterCategory(cat) {
             currentCategory = cat;
             document.querySelectorAll('.cat-btn').forEach(btn => {
-                if(btn.getAttribute('onclick').includes(`'${cat}'`)) {
-                    btn.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left w-full";
-                } else {
-                    btn.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full";
-                }
+                btn.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full";
             });
+            event.currentTarget.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left w-full";
             renderClientProducts(currentSearchGlobal);
         }
 
-        function adicionarAoCarrinho(id) {
-            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-            if(p) {
-                if(cart[id]) cart[id].qtd += 1;
-                else cart[id] = { ...p, qtd: 1 };
-                atualizarInterfaceCarrinho();
-            }
-        }
-
-        function alterarQuantidadeCarrinho(id, delta) {
+        function addToCart(id) {
             if(cart[id]) {
-                cart[id].qtd += delta;
-                if(cart[id].qtd <= 0) delete cart[id];
-                atualizarInterfaceCarrinho();
+                cart[id]++;
+            } else {
+                cart[id] = 1;
             }
+            atualizarCarrinhoVisual();
         }
 
-        function atualizarInterfaceCarrinho() {
+        function changeCartQty(id, delta) {
+            if(cart[id]) {
+                cart[id] += delta;
+                if(cart[id] <= 0) delete cart[id];
+            }
+            atualizarCarrinhoVisual();
+        }
+
+        function atualizarCarrinhoVisual() {
             let totalItens = 0;
             let valorTotal = 0;
-            const listContainer = document.getElementById('cart-items-list');
-            listContainer.innerHTML = '';
+            const containerLista = document.getElementById('cart-items-list');
+            containerLista.innerHTML = '';
 
-            Object.keys(cart).forEach(id => {
-                const item = cart[id];
-                totalItens += item.qtd;
-                valorTotal += (parseFloat(item.preco) * item.qtd);
+            for (const id in cart) {
+                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+                if(p) {
+                    totalItens += cart[id];
+                    valorTotal += (p.preco * cart[id]);
 
-                listContainer.innerHTML += `
-                    <div class="flex items-center justify-between py-3 gap-3">
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <img src="${item.foto}" class="w-12 h-12 object-cover rounded-lg border flex-shrink-0">
-                            <div class="overflow-hidden">
-                                <h5 class="text-xs font-medium truncate max-w-[160px]">${item.nome}</h5>
-                                <p class="text-[11px] font-bold text-neutral-900 mt-0.5">R$ ${(parseFloat(item.preco) * item.qtd).toFixed(2)}</p>
+                    containerLista.innerHTML += `
+                        <div class="flex items-center gap-3 py-3">
+                            <img src="${p.foto}" class="w-12 h-12 object-cover rounded-lg border border-neutral-100 shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-medium text-neutral-800 text-xs truncate">${p.nome}</h4>
+                                <p class="text-neutral-900 font-bold text-xs mt-0.5">R$ ${p.preco.toFixed(2)}</p>
                             </div>
-                        </div>
-                        <div class="flex items-center border border-neutral-200 rounded-lg bg-neutral-50 px-1 py-0.5">
-                            <button onclick="alterarQuantidadeCarrinho('${id}', -1)" class="px-1.5 py-0.5 font-bold hover:text-rose-600">-</button>
-                            <span class="px-2 text-xs font-semibold">${item.qtd}</span>
-                            <button onclick="alterarQuantidadeCarrinho('${id}', 1)" class="px-1.5 py-0.5 font-bold hover:text-black">+</button>
-                        </div>
-                    </div>
-                `;
-            });
+                            <div class="flex items-center border border-neutral-200 rounded-lg overflow-hidden bg-neutral-50 shrink-0">
+                                <button onclick="changeCartQty('${id}', -1)" class="px-2 py-1 text-neutral-500 hover:bg-neutral-200 transition-colors text-xs">-</button>
+                                <span class="px-2 text-neutral-800 font-medium text-xs">${cart[id]}</span>
+                                <button onclick="changeCartQty('${id}', 1)" class="px-2 py-1 text-neutral-500 hover:bg-neutral-200 transition-colors text-xs">+</button>
+                            </div>
+                        </div>`;
+                }
+            }
 
-            const totalFormatado = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
             document.getElementById('cart-count-pc').innerText = totalItens;
             document.getElementById('cart-count-mobile').innerText = totalItens;
-            document.getElementById('cart-total-mobile').innerText = totalFormatado;
-            document.getElementById('modal-total-value').innerText = totalFormatado;
+            
+            const txtTotal = `R$ ${valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('cart-total-mobile').innerText = txtTotal;
+            document.getElementById('modal-total-value').innerText = txtTotal;
 
-            const cartBar = document.getElementById('cart-bar-mobile');
-            if(totalItens > 0) cartBar.classList.remove('translate-y-full');
-            else cartBar.classList.add('translate-y-full');
+            const barMobile = document.getElementById('cart-bar-mobile');
+            if(totalItens > 0) {
+                barMobile.classList.replace('translate-y-full', 'translate-y-0');
+            } else {
+                barMobile.classList.replace('translate-y-0', 'translate-y-full');
+            }
         }
 
         function toggleCheckoutModal() {
@@ -691,75 +682,47 @@
             modal.classList.toggle('hidden');
         }
 
+        function atualizarDashboardMetricas() {
+            document.getElementById('dash-pedidos').innerText = datasetProducts.length;
+            let faturamentoSimulado = datasetProducts.reduce((acc, current) => acc + (current.preco * 3), 0);
+            document.getElementById('dash-faturamento').innerText = `R$ ${faturamentoSimulado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        }
+
         function submitOrder() {
             const nome = document.getElementById('client-name').value.trim();
             const fone = document.getElementById('client-phone').value.trim();
-            const endereço = document.getElementById('client-address').value.trim();
+            const endereco = document.getElementById('client-address').value.trim();
 
-            if(!nome || !fone || Object.keys(cart).length === 0) {
-                alert("Por favor, preencha nome, contato e adicione itens à sacola.");
+            if(!nome || !fone || !endereco) {
+                alert("Por favor, preencha todos os dados de entrega.");
                 return;
             }
 
             let msg = `✨ *Novo Pedido - LariAcessórios* ✨\n\n`;
             msg += `👤 *Cliente:* ${nome}\n`;
             msg += `📞 *WhatsApp:* ${fone}\n`;
-            if(endereço) msg += `📍 *Entrega/Retirada:* ${endereço}\n`;
-            msg += `\n🛍️ *Produtos selecionados:*\n`;
+            msg += `📍 *Endereço/Retirada:* ${endereco}\n\n`;
+            msg += `👜 *Sacola de Itens:*\n`;
 
-            let totalGeral = 0;
-            Object.keys(cart).forEach(id => {
-                const i = cart[id];
-                const sub = parseFloat(i.preco) * i.qtd;
-                totalGeral += sub;
-                msg += `• ${i.qtd}x ${i.nome} - R$ ${sub.toFixed(2)}\n`;
-            });
-
-            msg += `\n💰 *Total do Pedido:* R$ ${totalGeral.toFixed(2)}`;
-
-            const numeroAdmin = "5591983252639"; // Substitua pelo número real da marca com DDD
-            window.open(`https://api.whatsapp.com/send?phone=${numeroAdmin}&text=${encodeURIComponent(msg)}`, '_blank');
-
-            cart = {};
-            localStorage.removeItem('cart');
-            atualizarInterfaceCarrinho();
-            toggleCheckoutModal();
-            limparFormulario();
-        }
-
-        // Inicialização global da aplicação
-        carregarProdutosDoBanco();
-
-if(Object.keys(cart).length > 0){
-    atualizarInterfaceCarrinho();
-}
-
-        document.addEventListener('DOMContentLoaded', () => {
-
-    const senhaInput = document.getElementById('admin-password-input');
-
-    if(senhaInput){
-        senhaInput.addEventListener('keydown', function(e){
-            if(e.key === 'Enter'){
-                autenticarAdmin();
+            let subtotal = 0;
+            for(const id in cart) {
+                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+                if(prod) {
+                    const itemTotal = prod.preco * cart[id];
+                    subtotal += itemTotal;
+                    msg += `• ${cart[id]}x ${prod.nome} — R$ ${itemTotal.toFixed(2)}\n`;
+                }
             }
-        });
-    }
 
-});
-
-        function logoutAdmin(){
-
-    tokenSessao = null;
-
-    localStorage.removeItem('token');
-
-    document.getElementById('view-admin')
-        .classList.replace('block', 'hidden');
-
-    document.getElementById('view-client')
-        .classList.replace('hidden', 'block');
-}
+            msg += `\n💰 *Total do Pedido:* R$ ${subtotal.toFixed(2)}`;
+            
+            const foneSuporte = "5591999999999"; // Substitua pelo número real de atendimento da marca
+            window.open(`https://api.whatsapp.com/send?phone=${foneSuporte}&text=${encodeURIComponent(msg)}`, '_blank');
+            
+            cart = {};
+            atualizarCarrinhoVisual();
+            toggleCheckoutModal();
+        }
     </script>
 </body>
 </html>
