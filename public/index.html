@@ -320,12 +320,8 @@
             const preco = parseFloat(document.getElementById('prod-preco').value);
             const categoria = document.getElementById('prod-categoria').value;
             const fileInput = document.getElementById('prod-file');
-           if(file){
-    const permitidos = [
-        'image/jpeg',
-        'image/png',
-        'image/webp'
-    ];
+            const file = fileInput.files[0];
+            if(file){const permitidos = ['image/jpeg','image/png','image/webp'];
 
     if(!permitidos.includes(file.type)){
         alert('Formato inválido. Use JPG, PNG ou WEBP.');
