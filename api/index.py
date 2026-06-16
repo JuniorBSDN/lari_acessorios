@@ -4,6 +4,9 @@ import os
 import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import hmac
+import hashlib
+import time
 
 # Estrutura de caminhos do repositório (api/api/index.py sobe para public na raiz)
 app = Flask(__name__, static_folder='../../public', static_url_path='')
@@ -13,6 +16,9 @@ VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
 
+# Define a chave secreta baseada na senha do admin para assinar o token dinâmico
+SECRET_KEY = (ADMIN_PASSWORD or "fallback_seguro_desenvolvimento_local").encode()
+
 
 def obter_conexao():
     if not DATABASE_URL:
@@ -21,9 +27,38 @@ def obter_conexao():
     conn.autocommit = True
     return conn
 
+
+# ======================================================================
+# MOTOR DE SESSÃO DINÂMICA (HMAC CONTRA ENGENHARIA REVERSA)
+# ======================================================================
+def gerar_token_seguro():
+    """Gera um token com o timestamp atual e uma assinatura HMAC válida por 24h."""
+    timestamp = str(int(time.time()))
+    assinatura = hmac.new(SECRET_KEY, timestamp.encode(), hashlib.sha256).hexdigest()
+    return f"Bearer {timestamp}.{assinatura}"
+
+
 def validar_sessao():
-    token = request.headers.get("Authorization", "").strip()
-    return token == "Bearer sessao_valida_lari_premium"
+    """Valida o cabeçalho Authorization decodificando a assinatura e checando a expiração."""
+    auth_header = request.headers.get("Authorization", "").strip()
+    if not auth_header.startswith("Bearer "):
+        return False
+    
+    try:
+        token = auth_header.split(" ")[1]
+        timestamp_str, assinatura_recebida = token.split(".")
+        
+        # 1. Validação do tempo (Expira em 24 horas = 86400 segundos)
+        timestamp = int(timestamp_str)
+        if time.time() - timestamp > 86400:
+            return False  
+            
+        # 2. Validação da assinatura matemática
+        assinatura_esperada = hmac.new(SECRET_KEY, timestamp_str.encode(), hashlib.sha256).hexdigest()
+        
+        return hmac.compare_digest(assinatura_recebida, assinatura_esperada)
+    except Exception:
+        return False
 
 
 def inicializar_infraestrutura_banco():
@@ -62,7 +97,7 @@ def servir_arquivos_estaticos(path):
 
 
 # ======================================================================
-# LOGIN ADMIN
+# LOGIN ADMIN (GERAÇÃO DE TOKEN CRIPTOGRÁFICO)
 # ======================================================================
 @app.route("/api/login", methods=["POST"])
 @app.route("/api/admin/login", methods=["POST"])
@@ -73,14 +108,14 @@ def login_administrador():
     if not ADMIN_PASSWORD:
         return jsonify({
             "authenticated": False,
-            "error": "ADMIN_PASSWORD não configurada."
+            "error": "ADMIN_PASSWORD não configurada no ambiente."
         }), 500
 
     if senha == ADMIN_PASSWORD:
         return jsonify({
             "authenticated": True,
             "status": "success",
-            "token": "Bearer sessao_valida_lari_premium"
+            "token": gerar_token_seguro()  # Token dinâmico gerado aqui
         }), 200
 
     return jsonify({
@@ -88,13 +123,14 @@ def login_administrador():
         "error": "Senha incorreta."
     }), 401
 
+
 # ======================================================================
 # ENDPOINT DE UPLOAD DE FOTO (VERCEL BLOB)
 # ======================================================================
 @app.route("/api/upload", methods=["POST"])
 def upload_foto():
     if not validar_sessao():
-        return jsonify({"error": "Acesso não autorizado."}), 403
+        return jsonify({"error": "Acesso não autorizado ou sessão expirada."}), 403
 
     if 'foto' not in request.files:
         return jsonify({"error": "Nenhum arquivo de imagem enviado."}), 400
@@ -104,28 +140,17 @@ def upload_foto():
         return jsonify({"error": "Nome de arquivo inválido."}), 400
 
     ext = os.path.splitext(file.filename)[1].lower()
-
-    permitidos = {
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".webp"
-    }
+    permitidos = {".jpg", ".jpeg", ".png", ".webp"}
 
     if ext not in permitidos:
-        return jsonify({
-            "error": "Formato inválido."
-        }), 400
-    
-    
+        return jsonify({"error": "Formato inválido."}), 400
+        
     content_type = file.content_type or "application/octet-stream"
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
-    if len(conteudo_binario) > 5 * 1024 * 1024:
-        return jsonify({
-            "error": "Imagem maior que 5MB."
-        }), 400
     
+    if len(conteudo_binario) > 5 * 1024 * 1024:
+        return jsonify({"error": "Imagem maior que 5MB."}), 400
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
         return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente."}), 500
@@ -151,9 +176,8 @@ def upload_foto():
 @app.route("/api/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
     if request.method == "POST":
-        token_sessao = request.headers.get("Authorization")
-        if token_sessao != "Bearer sessao_valida_lari_premium":
-            return jsonify({"error": "Acesso não autorizado."}), 403
+        if not validar_sessao():
+            return jsonify({"error": "Acesso não autorizado ou sessão expirada."}), 403
 
         dados = request.get_json() or {}
         id_produto = dados.get("id_produto")
@@ -205,7 +229,7 @@ def gerenciar_produtos():
 @app.route("/api/produtos/<string:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
     if not validar_sessao():
-        return jsonify({"error": "Acesso não autorizado."}), 403
+        return jsonify({"error": "Acesso não autorizado ou sessão expirada."}), 403
 
     id_limpo = str(id_prod).strip()
 
