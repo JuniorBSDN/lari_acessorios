@@ -97,25 +97,28 @@ def servir_arquivos_estaticos(path):
 
 
 # ======================================================================
-# LOGIN ADMIN (GERAÇÃO DE TOKEN CRIPTOGRÁFICO)
+# LOGIN ADMIN (SUPORTA "senha" OU "password" PARA EVITAR CONFLITOS NO FRONT)
 # ======================================================================
 @app.route("/api/login", methods=["POST"])
 @app.route("/api/admin/login", methods=["POST"])
 def login_administrador():
     dados = request.get_json() or {}
-    senha = str(dados.get("senha", "")).strip()
+    
+    # Tolerância de mapeamento: busca por 'senha' ou 'password' enviados pelo front-end
+    senha = dados.get("senha") or dados.get("password")
+    senha = str(senha).strip() if senha is not None else ""
 
     if not ADMIN_PASSWORD:
         return jsonify({
             "authenticated": False,
-            "error": "ADMIN_PASSWORD não configurada no ambiente."
+            "error": "ADMIN_PASSWORD não configurada no ambiente da Vercel."
         }), 500
 
-    if senha == ADMIN_PASSWORD:
+    if senha == ADMIN_PASSWORD.strip():
         return jsonify({
             "authenticated": True,
             "status": "success",
-            "token": gerar_token_seguro()  # Token dinâmico gerado aqui
+            "token": gerar_token_seguro()  # Token dinâmico de 24h gerado aqui
         }), 200
 
     return jsonify({
