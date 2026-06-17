@@ -65,9 +65,6 @@
         </defs>
     </svg>
 
-    <!-- ========================================== -->
-    <!-- INTERFACE 1: VITRINE PÚBLICA DO CLIENTE     -->
-    <!-- ========================================== -->
     <div id="view-client" class="block pb-24 md:pb-6">
         <header class="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-40 w-full px-4 md:px-8 py-4">
             <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
@@ -110,10 +107,10 @@
                 <div>
                     <h3 class="hidden lg:block text-xs tracking-widest text-neutral-400 uppercase font-bold mb-4">Coleções</h3>
                     <div class="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar pb-1">
-                        <button onclick="filterCategory('todos')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left w-full">Todos os Produtos</button>
-                        <button onclick="filterCategory('relogios')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">🕰️ Relógios</button>
-                        <button onclick="filterCategory('cordoes')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">✨ Cordões</button>
-                        <button onclick="filterCategory('bolsas')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">👜 Bolsas Premium</button>
+                        <button id="btn-cat-todos" onclick="filterCategory('todos')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left w-full">Todos os Produtos</button>
+                        <button id="btn-cat-relogios" onclick="filterCategory('relogios')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">🕰️ Relógios</button>
+                        <button id="btn-cat-cordoes" onclick="filterCategory('cordoes')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">✨ Cordões</button>
+                        <button id="btn-cat-bolsas" onclick="filterCategory('bolsas')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">👜 Bolsas Premium</button>
                     </div>
                 </div>
             </aside>
@@ -139,9 +136,6 @@
         </button>
     </div>
 
-    <!-- ========================================== -->
-    <!-- INTERFACE 2: PAINEL ADMINISTRATIVO LUXO    -->
-    <!-- ========================================== -->
     <div id="view-admin" class="hidden min-h-screen bg-neutral-50">
         <header class="bg-black text-white py-5 px-4 md:px-8 sticky top-0 z-40">
             <div class="max-w-[1600px] mx-auto flex items-center justify-between">
@@ -168,11 +162,11 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Faturamento total</span>
+                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Valor do Acervo</span>
                             <span class="font-luxury text-xl font-bold text-black" id="dash-faturamento">R$ 0,00</span>
                         </div>
                         <div class="p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Produtos Cadastrados</span>
+                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Itens Cadastrados</span>
                             <span class="font-luxury text-xl font-bold text-black" id="dash-pedidos">0</span>
                         </div>
                     </div>
@@ -247,7 +241,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE CHECKOUT (SACOLA DE COMPRAS) -->
     <div id="checkout-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center md:justify-end">
         <div class="bg-white border-t md:border-t-0 md:border-l border-neutral-200 w-full max-w-md h-[90vh] md:h-screen rounded-t-2xl md:rounded-t-none p-6 space-y-6 overflow-y-auto shadow-2xl flex flex-col justify-between">
             <div class="flex flex-col h-full overflow-hidden">
@@ -275,7 +268,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE LOGIN ADMINISTRATIVO -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 border border-neutral-100 shadow-xl">
             <div class="text-center space-y-1">
@@ -292,16 +284,19 @@
         </div>
     </div>
 
-    <!-- ENGINE LOGIC -->
     <script>
         let datasetProducts = [];
         let cart = {};
         let currentCategory = 'todos';
         let currentSearchGlobal = '';
-        let tokenSessao = null;
+        let tokenSessao = localStorage.getItem('token_admin') || null;
 
         document.addEventListener("DOMContentLoaded", () => {
             carregarProdutosDoBanco();
+            // Se já possui token salvo, tenta renderizar a view correta se for o caso
+            if (tokenSessao) {
+                atualizarDashboardMetricas();
+            }
         });
 
         async function carregarProdutosDoBanco() {
@@ -324,12 +319,13 @@
             const id_existente = document.getElementById('prod-id').value;
             const nome = document.getElementById('prod-nome').value.trim();
             const preco = parseFloat(document.getElementById('prod-preco').value);
-            const categoria = document.getElementById('prod-categoria').value;
+            const categoryElement = document.getElementById('prod-categoria');
+            const categoria = categoryElement ? categoryElement.value : 'relogios';
             const fileInput = document.getElementById('prod-file');
-            const file = fileInput.files[0];
+            const file = fileInput ? fileInput.files[0] : null;
 
             if(file){
-                const permitidos = ['image/jpeg','image/png','image/webp'];
+                const permitidos = ['image/jpeg','image/png','image/webp','image/jpg'];
                 if(!permitidos.includes(file.type)){
                     alert('Formato inválido. Use JPG, PNG ou WEBP.');
                     return;
@@ -419,11 +415,14 @@
             if(p) {
                 p.visivel = !p.visivel;
                 try {
-                    await fetch('/api/produtos', {
+                    const response = await fetch('/api/produtos', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': tokenSessao },
                         body: JSON.stringify(p)
                     });
+                    if(!response.ok) {
+                        throw new Error("Erro de resposta do servidor");
+                    }
                     await carregarProdutosDoBanco();
                 } catch(err) {
                     console.error("Erro ao chavear visibilidade do item:", err);
@@ -436,7 +435,8 @@
             document.getElementById('prod-id').value = '';
             document.getElementById('prod-nome').value = '';
             document.getElementById('prod-preco').value = '';
-            document.getElementById('prod-file').value = '';
+            const fileInput = document.getElementById('prod-file');
+            if(fileInput) fileInput.value = '';
             document.getElementById('form-title').innerText = "Curar Novo Acessório";
             document.getElementById('btn-cancelar').classList.add('hidden');
             document.getElementById('upload-placeholder-view').classList.remove('hidden');
@@ -486,7 +486,7 @@
             if(!senha) return;
 
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('/api/admin/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ senha })
@@ -500,10 +500,12 @@
 
                 if(response.ok && resultado.authenticated) {
                     tokenSessao = resultado.token;
+                    localStorage.setItem('token_admin', tokenSessao);
                     document.getElementById('login-modal').classList.add('hidden');
                     senhaInput.value = '';
                     document.getElementById('view-client').classList.replace('block', 'hidden');
                     document.getElementById('view-admin').classList.replace('hidden', 'block');
+                    atualizarDashboardMetricas();
                     renderAdminTable();
                 } else {
                     alert(resultado.error || "Senha incorreta.");
@@ -516,11 +518,36 @@
 
         function logoutAdmin() {
             tokenSessao = null;
+            localStorage.removeItem('token_admin');
             switchView('client');
+        }
+
+        function syncSearch(value) {
+            currentSearchGlobal = value;
+            document.getElementById('search-input-pc').value = value;
+            document.getElementById('search-input-mobile').value = value;
+            renderClientProducts(value);
+        }
+
+        function filterCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.replace('bg-black', 'bg-neutral-50');
+                btn.classList.replace('text-white', 'text-neutral-600');
+                btn.classList.remove('font-semibold');
+            });
+            const activeBtn = document.getElementById(`btn-cat-${cat}`);
+            if (activeBtn) {
+                activeBtn.classList.replace('bg-neutral-50', 'bg-black');
+                activeBtn.classList.replace('text-neutral-600', 'text-white');
+                activeBtn.classList.add('font-semibold');
+            }
+            renderClientProducts(currentSearchGlobal);
         }
 
         function renderClientProducts(searchQuery = '') {
             const grid = document.getElementById('products-grid');
+            if(!grid) return;
             grid.innerHTML = '';
 
             const filtrados = datasetProducts.filter(p => {
@@ -536,54 +563,68 @@
             }
 
             filtrados.forEach(p => {
-                grid.innerHTML += `
-                    <div class="group bg-white border border-neutral-100 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-500 flex flex-col justify-between">
-                        <div class="relative overflow-hidden aspect-square bg-neutral-50">
-                            <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                const card = document.createElement('div');
+                card.className = "bg-white group border border-neutral-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div class="relative overflow-hidden bg-neutral-50 aspect-square">
+                        <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                        <div>
+                            <span class="text-[9px] font-bold tracking-widest text-neutral-400 uppercase">${p.categoria}</span>
+                            <h4 class="text-xs font-medium text-neutral-800 line-clamp-2 mt-0.5">${p.nome}</h4>
                         </div>
-                        <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                            <div>
-                                <h4 class="text-xs text-neutral-400 uppercase tracking-widest">${p.categoria}</h4>
-                                <h3 class="font-medium text-neutral-800 text-sm line-clamp-2">${p.nome}</h3>
-                            </div>
-                            <div class="flex items-center justify-between pt-2 border-t border-neutral-50">
-                                <span class="text-neutral-900 font-bold text-sm">R$ ${p.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                <button onclick="addToCart('${p.id_produto}')" class="bg-black hover:bg-neutral-800 text-white p-2 rounded-xl flex items-center justify-center transition-colors">
-                                    <span class="material-symbols-rounded text-sm text-gold">add_shopping_cart</span>
-                                </button>
-                            </div>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-sm font-bold text-black">R$ ${p.preco.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <button onclick="addToCart('${p.id_produto}')" class="p-2 rounded-xl bg-neutral-50 hover:bg-black text-neutral-700 hover:text-white transition-all">
+                                <span class="material-symbols-rounded text-sm flex">add_shopping_cart</span>
+                            </button>
                         </div>
-                    </div>`;
+                    </div>
+                `;
+                grid.appendChild(card);
             });
         }
 
         function renderAdminTable() {
             const tbody = document.getElementById('admin-table-body');
+            if(!tbody) return;
             tbody.innerHTML = '';
 
+            if(datasetProducts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-neutral-400 text-xs font-light">Nenhum produto cadastrado no acervo.</td></tr>`;
+                return;
+            }
+
             datasetProducts.forEach(p => {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-neutral-50/80 transition-colors">
-                        <td class="py-3.5 flex items-center gap-3 font-medium text-neutral-800">
-                            <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-200">
-                            <span class="truncate max-w-[180px]">${p.nome}</span>
-                        </td>
-                        <td class="py-3.5 text-neutral-500 uppercase tracking-wider text-[10px] font-semibold">${p.categoria}</td>
-                        <td class="py-3.5 font-bold text-neutral-900">R$ ${p.preco.toFixed(2)}</td>
-                        <td class="py-3.5 text-center">
-                            <button onclick="toggleVisibilidade('${p.id_produto}')" class="p-1 rounded-md text-xl transition-colors ${p.visivel ? 'text-emerald-500 hover:text-emerald-600' : 'text-neutral-300 hover:text-neutral-400'}">
-                                <span class="material-symbols-rounded">${p.visivel ? 'visibility' : 'visibility_off'}</span>
-                            </button>
-                        </td>
-                        <td class="py-3.5 text-right space-x-1">
-                            <button onclick="carregarProdutoParaEdicao('${p.id_produto}')" class="p-1 text-neutral-400 hover:text-black transition-colors"><span class="material-symbols-rounded text-sm">edit</span></button>
-                            <button onclick="removerProduto('${p.id_produto}')" class="p-1 text-neutral-400 hover:text-red-500 transition-colors"><span class="material-symbols-rounded text-sm">delete</span></button>
-                        </td>
-                    </tr>`;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-neutral-50/80 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-4 flex items-center gap-3">
+                        <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-100 shadow-sm shrink-0">
+                        <span class="font-medium text-neutral-800">${p.nome}</span>
+                    </td>
+                    <td class="py-4 text-neutral-500 uppercase tracking-wider text-[10px] font-semibold">${p.categoria}</td>
+                    <td class="py-4 font-bold text-black">R$ ${p.preco.toFixed(2)}</td>
+                    <td class="py-4 text-center">
+                        <button onclick="toggleVisibilidade('${p.id_produto}')" class="p-1 rounded-md ${p.visivel ? 'text-green-600 bg-green-50' : 'text-neutral-400 bg-neutral-100'} hover:scale-105 transition-all">
+                            <span class="material-symbols-rounded text-lg flex">${p.visivel ? 'visibility' : 'visibility_off'}</span>
+                        </button>
+                    </td>
+                    <td class="py-4 text-right space-x-1 whitespace-nowrap">
+                        <button onclick="carregarParaEdicao('${p.id_produto}')" class="p-2 rounded-lg bg-neutral-50 text-neutral-600 hover:bg-black hover:text-white transition-all">
+                            <span class="material-symbols-rounded text-sm flex">edit</span>
+                        </button>
+                        <button onclick="removerProduto('${p.id_produto}')" class="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all">
+                            <span class="material-symbols-rounded text-sm flex">delete</span>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        function carregarProdutoParaEdicao(id) {
+        function carregarParaEdicao(id) {
             const p = datasetProducts.find(item => String(item.id_produto) === String(id));
             if(p) {
                 document.getElementById('prod-id').value = p.id_produto;
@@ -593,135 +634,157 @@
                 document.getElementById('form-title').innerText = "Editar Acessório";
                 document.getElementById('btn-cancelar').classList.remove('hidden');
 
-                document.getElementById('upload-placeholder-view').class_list = 'hidden';
-                const containerPreview = document.getElementById('upload-preview-container');
-                containerPreview.classList.remove('hidden');
-                containerPreview.classList.add('flex');
+                document.getElementById('upload-placeholder-view').classList.add('hidden');
+                const previewContainer = document.getElementById('upload-preview-container');
+                previewContainer.classList.remove('hidden');
+                previewContainer.classList.add('flex');
                 document.getElementById('upload-preview-img').src = p.foto;
             }
         }
 
-        function syncSearch(val) {
-            currentSearchGlobal = val;
-            document.getElementById('search-input-pc').value = val;
-            document.getElementById('search-input-mobile').value = val;
-            renderClientProducts(val);
-        }
-
-        function filterCategory(cat) {
-            currentCategory = cat;
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                btn.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full";
+        function atualizarDashboardMetricas() {
+            let totalAcervo = 0;
+            datasetProducts.forEach(p => {
+                totalAcervo += (p.preco || 0);
             });
-            event.currentTarget.className = "cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left w-full";
-            renderClientProducts(currentSearchGlobal);
-        }
 
-        function addToCart(id) {
-            if(cart[id]) {
-                cart[id]++;
-            } else {
-                cart[id] = 1;
-            }
-            atualizarCarrinhoVisual();
-        }
-
-        function changeCartQty(id, delta) {
-            if(cart[id]) {
-                cart[id] += delta;
-                if(cart[id] <= 0) delete cart[id];
-            }
-            atualizarCarrinhoVisual();
-        }
-
-        function atualizarCarrinhoVisual() {
-            let totalItens = 0;
-            let valorTotal = 0;
-            const containerLista = document.getElementById('cart-items-list');
-            containerLista.innerHTML = '';
-
-            for (const id in cart) {
-                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-                if(p) {
-                    totalItens += cart[id];
-                    valorTotal += (p.preco * cart[id]);
-
-                    containerLista.innerHTML += `
-                        <div class="flex items-center gap-3 py-3">
-                            <img src="${p.foto}" class="w-12 h-12 object-cover rounded-lg border border-neutral-100 shrink-0">
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-medium text-neutral-800 text-xs truncate">${p.nome}</h4>
-                                <p class="text-neutral-900 font-bold text-xs mt-0.5">R$ ${p.preco.toFixed(2)}</p>
-                            </div>
-                            <div class="flex items-center border border-neutral-200 rounded-lg overflow-hidden bg-neutral-50 shrink-0">
-                                <button onclick="changeCartQty('${id}', -1)" class="px-2 py-1 text-neutral-500 hover:bg-neutral-200 transition-colors text-xs">-</button>
-                                <span class="px-2 text-neutral-800 font-medium text-xs">${cart[id]}</span>
-                                <button onclick="changeCartQty('${id}', 1)" class="px-2 py-1 text-neutral-500 hover:bg-neutral-200 transition-colors text-xs">+</button>
-                            </div>
-                        </div>`;
-                }
-            }
-
-            document.getElementById('cart-count-pc').innerText = totalItens;
-            document.getElementById('cart-count-mobile').innerText = totalItens;
+            const dashFaturamento = document.getElementById('dash-faturamento');
+            const dashPedidos = document.getElementById('dash-pedidos');
             
-            const txtTotal = `R$ ${valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-            document.getElementById('cart-total-mobile').innerText = txtTotal;
-            document.getElementById('modal-total-value').innerText = txtTotal;
-
-            const barMobile = document.getElementById('cart-bar-mobile');
-            if(totalItens > 0) {
-                barMobile.classList.replace('translate-y-full', 'translate-y-0');
-            } else {
-                barMobile.classList.replace('translate-y-0', 'translate-y-full');
-            }
+            if(dashFaturamento) dashFaturamento.innerText = `R$ ${totalAcervo.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if(dashPedidos) dashPedidos.innerText = datasetProducts.length.toString();
         }
 
         function toggleCheckoutModal() {
             const modal = document.getElementById('checkout-modal');
-            modal.classList.toggle('hidden');
+            if(!modal) return;
+            if(modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                renderCartItems();
+            } else {
+                modal.classList.add('hidden');
+            }
         }
 
-        function atualizarDashboardMetricas() {
-            document.getElementById('dash-pedidos').innerText = datasetProducts.length;
-            let faturamentoSimulado = datasetProducts.reduce((acc, current) => acc + (current.preco * 3), 0);
-            document.getElementById('dash-faturamento').innerText = `R$ ${faturamentoSimulado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        function addToCart(id) {
+            if(!cart[id]) cart[id] = 0;
+            cart[id]++;
+            updateCartUI();
+            
+            // Exibe a barra do carrinho no mobile animando a subida
+            const mobileBar = document.getElementById('cart-bar-mobile');
+            if(mobileBar) mobileBar.classList.remove('translate-y-full');
+        }
+
+        function removeFromCart(id) {
+            if(cart[id]) {
+                cart[id]--;
+                if(cart[id] <= 0) delete cart[id];
+            }
+            updateCartUI();
+            renderCartItems();
+        }
+
+        function updateCartUI() {
+            let totalItens = 0;
+            let valorTotal = 0;
+
+            Object.keys(cart).forEach(id => {
+                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+                if(p) {
+                    totalItens += cart[id];
+                    valorTotal += (p.preco * cart[id]);
+                }
+            });
+
+            document.getElementById('cart-count-pc').innerText = totalItens;
+            document.getElementById('cart-count-mobile').innerText = totalItens;
+            
+            const totalStr = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('cart-total-mobile').innerText = totalStr;
+            document.getElementById('modal-total-value').innerText = totalStr;
+
+            if(totalItens <= 0) {
+                const mobileBar = document.getElementById('cart-bar-mobile');
+                if(mobileBar) mobileBar.classList.add('translate-y-full');
+            }
+        }
+
+        function renderCartItems() {
+            const list = document.getElementById('cart-items-list');
+            if(!list) return;
+            list.innerHTML = '';
+
+            const keys = Object.keys(cart);
+            if(keys.length === 0) {
+                list.innerHTML = `<div class="py-12 text-center text-neutral-400 text-xs font-light flex flex-col items-center justify-center gap-2"><span class="material-symbols-rounded text-2xl">shopping_basket</span>Sua sacola está vazia</div>`;
+                return;
+            }
+
+            keys.forEach(id => {
+                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+                if(p) {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between py-3 gap-3";
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <img src="${p.foto}" class="w-12 h-12 object-cover rounded-xl border border-neutral-100 shadow-sm shrink-0">
+                            <div>
+                                <h5 class="text-xs font-medium text-neutral-800 line-clamp-1">${p.nome}</h5>
+                                <span class="text-xs font-bold text-black block mt-0.5">R$ ${p.preco.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-2.5 py-1 rounded-xl shrink-0">
+                            <button onclick="removeFromCart('${p.id_produto}')" class="text-neutral-500 hover:text-black font-bold text-sm">-</button>
+                            <span class="text-xs font-semibold px-1 min-w-[12px] text-center">${cart[id]}</span>
+                            <button onclick="addToCart('${p.id_produto}')" class="text-neutral-500 hover:text-black font-bold text-sm">+</button>
+                        </div>
+                    `;
+                    list.appendChild(row);
+                }
+            });
         }
 
         function submitOrder() {
             const nome = document.getElementById('client-name').value.trim();
             const fone = document.getElementById('client-phone').value.trim();
-            const endereco = document.getElementById('client-address').value.trim();
+            const endereço = document.getElementById('client-address').value.trim();
 
-            if(!nome || !fone || !endereco) {
-                alert("Por favor, preencha todos os dados de entrega.");
+            if(!nome || !fone) {
+                alert('Por favor, preencha seu Nome e WhatsApp de contato.');
                 return;
             }
 
-            let msg = `✨ *Novo Pedido - LariAcessórios* ✨\n\n`;
+            let msg = `🛍️ *Novo Pedido - LariAcessórios*\n\n`;
             msg += `👤 *Cliente:* ${nome}\n`;
             msg += `📞 *WhatsApp:* ${fone}\n`;
-            msg += `📍 *Endereço/Retirada:* ${endereco}\n\n`;
-            msg += `👜 *Sacola de Itens:*\n`;
+            if(endereço) msg += `📍 *Endereço/Retirada:* ${endereço}\n`;
+            msg += `\n-----------------------------------\n📦 *Itens do Pedido:*\n`;
 
             let subtotal = 0;
-            for(const id in cart) {
-                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-                if(prod) {
-                    const itemTotal = prod.preco * cart[id];
-                    subtotal += itemTotal;
-                    msg += `• ${cart[id]}x ${prod.nome} — R$ ${itemTotal.toFixed(2)}\n`;
+            Object.keys(cart).forEach(id => {
+                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+                if(p) {
+                    const qtd = cart[id];
+                    const totalItem = p.preco * qtd;
+                    subtotal += totalItem;
+                    msg += `• ${qtd}x ${p.nome} (R$ ${p.preco.toFixed(2)}) -> *R$ ${totalItem.toFixed(2)}*\n`;
                 }
-            }
+            });
 
-            msg += `\n💰 *Total do Pedido:* R$ ${subtotal.toFixed(2)}`;
+            msg += `-----------------------------------\n`;
+            msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
+            msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
+
+            const foneEmpresa = "5591999999999"; // TODO: Substitua pelo WhatsApp real da LariAcessórios
+            const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
             
-            const foneSuporte = "5591999999999"; // Substitua pelo número real de atendimento da marca
-            window.open(`https://api.whatsapp.com/send?phone=${foneSuporte}&text=${encodeURIComponent(msg)}`, '_blank');
-            
+            // Limpa carrinho e fecha modal após o envio bem-sucedido
             cart = {};
-            atualizarCarrinhoVisual();
+            updateCartUI();
             toggleCheckoutModal();
+            
+            window.open(url, '_blank');
         }
     </script>
 </body>
