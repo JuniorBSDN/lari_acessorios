@@ -10,46 +10,45 @@ CORS(app)
 
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
-# CÓDIGO CORRIGIDO:
-DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
-
 
 def obter_conexao():
-    if not DATABASE_URL:
-        raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    db_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
+    
+    if not db_url:
+        raise ValueError("A string de conexão com o banco de dados não foi encontrada no ambiente da Vercel.")
+    
+    conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
     conn.autocommit = True
     return conn
 
-
 def inicializar_infraestrutura_banco():
-    if DATABASE_URL:
-        try:
-            conn = obter_conexao()
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS produtos (
-                    id_produto VARCHAR(255) PRIMARY KEY,
-                    nome VARCHAR(255) NOT NULL,
-                    preco NUMERIC(10, 2) NOT NULL,
-                    categoria VARCHAR(100) NOT NULL,
-                    foto TEXT NOT NULL,
-                    visivel BOOLEAN DEFAULT TRUE
-                );
-            """)
-            cursor.close()
-            conn.close()
-        except Exception as e:
-            print(f"⚠️ Inicialização do banco: {str(e)}")
-
+    try:
+        conn = obter_conexao()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS produtos (
+                id_produto VARCHAR(255) PRIMARY KEY,
+                nome VARCHAR(255) NOT NULL,
+                preco NUMERIC(10, 2) NOT NULL,
+                categoria VARCHAR(100) NOT NULL,
+                foto TEXT NOT NULL,
+                visivel BOOLEAN DEFAULT TRUE
+            );
+        """)
+        cursor.close()
+        conn.close()
+        print("✅ Banco de dados sincronizado.")
+    except Exception as e:
+        print(f"⚠️ Inicialização do banco: {str(e)}")
 
 try:
     inicializar_infraestrutura_banco()
 except Exception:
     pass
 
-
+# Ajustado: O vercel.json já direciona o match de /api/admin/login para cá
 @app.route("/api/admin/login", methods=["POST"])
+@app.route("/admin/login", methods=["POST"])
 def login_administrador():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
@@ -62,8 +61,9 @@ def login_administrador():
 
     return jsonify({"error": "Senha incorreta!"}), 401
 
-
+# Ajustado: Suporta o redirecionamento com ou sem o prefixo interpretado
 @app.route("/api/upload", methods=["POST"])
+@app.route("/upload", methods=["POST"])
 def upload_foto():
     token_sessao = request.headers.get("Authorization")
     if token_sessao != "Bearer sessao_valida_lari_premium":
@@ -98,8 +98,9 @@ def upload_foto():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
+# Ajustado: Rotas duplicadas com e sem prefixo para blindar contra variações de proxy da Vercel
 @app.route("/api/produtos", methods=["GET", "POST"])
+@app.route("/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
     if request.method == "POST":
         token_sessao = request.headers.get("Authorization")
@@ -148,8 +149,8 @@ def gerenciar_produtos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
+@app.route("/produtos/<path:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
     token_sessao = request.headers.get("Authorization")
     if token_sessao != "Bearer sessao_valida_lari_premium":
