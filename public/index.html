@@ -284,9 +284,9 @@
         </div>
     </div>
 
-    <script>
+   <script>
 // ======================================================================
-// SISTEMA INTEGRADO DE FRONTEND - LARI ACESSÓRIOS (CORRIGIDO)
+// SISTEMA INTEGRADO DE FRONTEND - LARI ACESSÓRIOS (CORREÇÃO DE CHAMADAS)
 // ======================================================================
 let datasetProducts = [];
 let cart = {};
@@ -330,7 +330,8 @@ function switchView(view) {
     }
 }
 
-async function efetuarem LoginAdmin(senha) {
+// CORRIGIDO: Nome da função unificado e sem espaços para evitar quebra de sintaxe
+async function efetuarLoginAdmin(senha) {
     try {
         const resposta = await fetch('/api/admin/login', {
             method: 'POST',
@@ -364,12 +365,10 @@ async function carregarProdutosAdmin() {
         if (resposta.ok) {
             datasetProducts = await resposta.json();
 
-            // Atualiza Dashboard
             const totalAcervo = datasetProducts.reduce((acc, p) => acc + parseFloat(p.preco), 0);
             document.getElementById('dash-faturamento').innerText = `R$ ${totalAcervo.toFixed(2)}`;
             document.getElementById('dash-pedidos').innerText = datasetProducts.length;
 
-            // Alinhado com o ID correto do HTML: 'admin-table-body'
             const tbody = document.getElementById('admin-table-body');
             if (!tbody) return;
             tbody.innerHTML = '';
@@ -406,15 +405,15 @@ async function carregarProdutosAdmin() {
     }
 }
 
-async function salvarProduto(event) {
+// CORRIGIDO: Nome alterado para bater exatamente com o "salvarProdutoCompleto()" do botão
+async function salvarProdutoCompleto(event) {
     if (event) event.preventDefault();
 
-    // IDs sincronizados perfeitamente com os elementos gráficos do seu index.html
     const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
     const nome = document.getElementById('prod-nome').value.trim();
     const preco = document.getElementById('prod-preco').value.trim();
     const categoria = document.getElementById('prod-categoria').value;
-    const fileInput = document.getElementById('prod-foto');
+    const fileInput = document.getElementById('prod-file'); // ID correto do input file do seu HTML
 
     if (!nome || !preco || !categoria) {
         alert("Preencha todos os campos obrigatórios.");
@@ -500,7 +499,8 @@ function limparFormulario() {
     document.getElementById('prod-id').value = '';
     document.getElementById('prod-nome').value = '';
     document.getElementById('prod-preco').value = '';
-    document.getElementById('prod-foto').value = '';
+    const fileInput = document.getElementById('prod-file');
+    if (fileInput) fileInput.value = '';
 }
 
 function renderizarVitrine() {
@@ -610,7 +610,7 @@ function toggleCheckoutModal() {
 }
 
 function renderizarSacolaModal() {
-    const container = document.getElementById('cart-items-container');
+    const container = document.getElementById('cart-items-list'); // ID correto do container da sacola no seu HTML
     if (!container) return;
     container.innerHTML = '';
 
@@ -641,8 +641,8 @@ function renderizarSacolaModal() {
         container.innerHTML = `<p class="text-center text-neutral-400 text-xs py-12 font-light">Sua sacola está vazia.</p>`;
     }
 
-    const subtotalEl = document.getElementById('modal-subtotal');
-    if (subtotalEl) subtotalEl.innerText = `R$ ${subtotal.toFixed(2)}`;
+    const totalValueEl = document.getElementById('modal-total-value');
+    if (totalValueEl) totalValueEl.innerText = `R$ ${subtotal.toFixed(2)}`;
 }
 
 function removerItemCarrinho(id) {
@@ -654,7 +654,8 @@ function removerItemCarrinho(id) {
     renderizarSacolaModal();
 }
 
-function enviarPedido() {
+// CORRIGIDO: Nome alterado para bater com o "submitOrder()" chamado no botão do modal
+function submitOrder() {
     const nome = document.getElementById('client-name').value.trim();
     const fone = document.getElementById('client-phone').value.trim();
     const endereco = document.getElementById('client-address').value.trim();
@@ -685,10 +686,23 @@ function enviarPedido() {
     msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
     msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
 
-    const foneEmpresa = "5591999999999";
+    const foneEmpresa = "5591999999999"; 
     const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
 }
-    </script>
+
+// Funções auxiliares para visualização do arquivo de imagem selecionado no painel
+function processImageFile(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('upload-placeholder-view').classList.add('hidden');
+            document.getElementById('upload-preview-container').classList.remove('hidden');
+            document.getElementById('upload-preview-img').src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
 </body>
 </html>
