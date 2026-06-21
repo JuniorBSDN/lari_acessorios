@@ -297,18 +297,15 @@
     });
 
     async function carregarProdutosDoServidor() {
-        try {
-            const resposta = await fetch('/api/produtos');
-            if (resposta.ok) {
-                datasetProducts = await resposta.json();
-                renderizarVitrine();
-            } else {
-                console.error("Erro ao puxar dados do catálogo.");
-            }
-        } catch (erro) {
-            console.error("Erro de rede ao conectar à API:", erro);
-        }
-    }
+       // Dentro da função salvarProdutoCompleto
+const resposta = await fetch('/api/produtos', { // Verifique se está exatamente '/api/produtos'
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token
+    },
+    body: JSON.stringify(payload)
+});
 
     // Adaptado para abrir o modal requintado em vez do prompt cru do sistema
     function switchView(view) {
