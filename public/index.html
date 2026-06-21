@@ -458,69 +458,84 @@
                 reader.readAsDataURL(file);
             }
         }
+ 
+ 
+// ======================================================================
+// SISTEMA DE AUTENTICAÇÃO E CONTROLE DO PAINEL DA LARISSA
+// ======================================================================
 
-        function switchView(target) {
-            if(target === 'admin') {
-                if (tokenSessao) {
-                    document.getElementById('view-client').classList.replace('block', 'hidden');
-                    document.getElementById('view-admin').classList.replace('hidden', 'block');
-                    renderAdminTable();
-                } else {
-                    document.getElementById('login-modal').classList.remove('hidden');
-                }
-            } else {
-                document.getElementById('view-admin').classList.replace('block', 'hidden');
-                document.getElementById('view-client').classList.replace('hidden', 'block');
-                renderClientProducts(currentSearchGlobal);
-            }
+// 1. Redirecionamento e proteção de telas do Painel
+function switchView(view) {
+    if (view === 'admin') {
+        const token = localStorage.getItem('lari_admin_token');
+        
+        // Se já estiver logado com o token correto, abre direto o painel
+        if (token === 'sessao_valida_lari_premium') {
+            document.getElementById('view-client').classList.add('hidden');
+            document.getElementById('view-admin').classList.remove('hidden');
+            carregarProdutosAdmin(); // Função que renderiza a tabela do painel
+        } else {
+            // Caso contrário, solicita a senha através de um prompt limpo
+            const senhaDigitada = prompt("Introduza a senha de administração:");
+            if (senhaDigitada === null) return; // Cancelou o prompt
+
+            efetuarLoginAdmin(senhaDigitada);
         }
+    } else {
+        // Voltar para a vitrine pública
+        document.getElementById('view-admin').classList.add('hidden');
+        document.getElementById('view-client').classList.remove('hidden');
+    }
+}
 
-        function fecharModalLogin() {
-            document.getElementById('login-modal').classList.add('hidden');
-            document.getElementById('admin-password-input').value = '';
+// 2. Requisição de Login integrada 100% com o index.py
+async function efetuarLoginAdmin(senha) {
+    try {
+        const resposta = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // Envia exatamente a chave "senha" que o Flask espera receber
+            body: JSON.stringify({ senha: senha }) 
+        });
+
+        const resultado = await resposta.json();
+
+        if (resposta.ok && resultado.status === "success") {
+            // Armazena o token exato retornado pelo backend
+            localStorage.setItem('lari_admin_token', resultado.token);
+            
+            // Alterna os blocos de visualização na interface
+            document.getElementById('view-client').classList.add('hidden');
+            document.getElementById('view-admin').classList.remove('hidden');
+            
+            // Atualiza os dados do dashboard e tabela administrativa
+            carregarProdutosAdmin();
+            alert("Autenticação efetuada com sucesso! Bem-vinda, Larissa.");
+        } else {
+            alert(resultado.error || "Senha incorreta para o perfil de administrador.");
         }
+    } catch (erro) {
+        console.error("Erro na comunicação com o backend:", erro);
+        alert("Erro técnico: Não foi possível conectar ao subsistema de login.");
+    }
+}
 
-        async function autenticarAdmin() {
-            const senhaInput = document.getElementById('admin-password-input');
-            const senha = senhaInput.value;
-            if(!senha) return;
+// 3. Encerramento seguro de sessão (Logout)
+function logoutAdmin() {
+    localStorage.removeItem('lari_admin_token');
+    document.getElementById('view-admin').classList.add('hidden');
+    document.getElementById('view-client').classList.remove('hidden');
+    alert("Sessão administrativa encerrada.");
+}
 
-            try {
-                const response = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ senha })
-                });
 
-                if (!response.ok && response.status !== 401) {
-                    throw new Error(`Status HTTP ${response.status}`);
-                }
 
-                const resultado = await response.json();
 
-                if(response.ok && resultado.authenticated) {
-                    tokenSessao = resultado.token;
-                    localStorage.setItem('token_admin', tokenSessao);
-                    document.getElementById('login-modal').classList.add('hidden');
-                    senhaInput.value = '';
-                    document.getElementById('view-client').classList.replace('block', 'hidden');
-                    document.getElementById('view-admin').classList.replace('hidden', 'block');
-                    atualizarDashboardMetricas();
-                    renderAdminTable();
-                } else {
-                    alert(resultado.error || "Senha incorreta.");
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Erro ao conectar com o servidor de autenticação. Verifique suas rotas.");
-            }
-        }
 
-        function logoutAdmin() {
-            tokenSessao = null;
-            localStorage.removeItem('token_admin');
-            switchView('client');
-        }
+
+      
 
         function syncSearch(value) {
             currentSearchGlobal = value;
@@ -650,7 +665,7 @@
 
             const dashFaturamento = document.getElementById('dash-faturamento');
             const dashPedidos = document.getElementById('dash-pedidos');
-            
+
             if(dashFaturamento) dashFaturamento.innerText = `R$ ${totalAcervo.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             if(dashPedidos) dashPedidos.innerText = datasetProducts.length.toString();
         }
@@ -670,7 +685,7 @@
             if(!cart[id]) cart[id] = 0;
             cart[id]++;
             updateCartUI();
-            
+
             // Exibe a barra do carrinho no mobile animando a subida
             const mobileBar = document.getElementById('cart-bar-mobile');
             if(mobileBar) mobileBar.classList.remove('translate-y-full');
@@ -699,7 +714,7 @@
 
             document.getElementById('cart-count-pc').innerText = totalItens;
             document.getElementById('cart-count-mobile').innerText = totalItens;
-            
+
             const totalStr = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             document.getElementById('cart-total-mobile').innerText = totalStr;
             document.getElementById('modal-total-value').innerText = totalStr;
@@ -776,14 +791,14 @@
             msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
             msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
 
-            const foneEmpresa = "5591999999999"; // TODO: Substitua pelo WhatsApp real da LariAcessórios
+            const foneEmpresa = "5591983252639"; // TODO: Substitua pelo WhatsApp real da LariAcessórios
             const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
-            
+
             // Limpa carrinho e fecha modal após o envio bem-sucedido
             cart = {};
             updateCartUI();
             toggleCheckoutModal();
-            
+
             window.open(url, '_blank');
         }
     </script>
