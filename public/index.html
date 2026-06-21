@@ -241,6 +241,7 @@
         </div>
     </div>
 
+    <!-- Ajustado o botão abaixo para rodar enviarPedido() em vez de submitOrder() -->
     <div id="checkout-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center md:justify-end">
         <div class="bg-white border-t md:border-t-0 md:border-l border-neutral-200 w-full max-w-md h-[90vh] md:h-screen rounded-t-2xl md:rounded-t-none p-6 space-y-6 overflow-y-auto shadow-2xl flex flex-col justify-between">
             <div class="flex flex-col h-full overflow-hidden">
@@ -263,11 +264,12 @@
                     <span>Total do Pedido:</span>
                     <span id="modal-total-value" class="text-lg font-bold text-black">R$ 0,00</span>
                 </div>
-                <button onclick="submitOrder()" class="w-full bg-black hover:bg-neutral-900 text-white font-bold py-4 rounded-xl tracking-widest text-xs uppercase transition-all shadow-lg">Enviar via WhatsApp</button>
+                <button onclick="enviarPedido()" class="w-full bg-black hover:bg-neutral-900 text-white font-bold py-4 rounded-xl tracking-widest text-xs uppercase transition-all shadow-lg">Enviar via WhatsApp</button>
             </div>
         </div>
     </div>
 
+    <!-- Modal Customizado de Login que já estava estruturado no HTML -->
     <div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 border border-neutral-100 shadow-xl">
             <div class="text-center space-y-1">
@@ -284,425 +286,434 @@
         </div>
     </div>
 
-   <script>
-// ======================================================================
-// SISTEMA INTEGRADO DE FRONTEND - LARI ACESSÓRIOS (CORREÇÃO DE CHAMADAS)
-// ======================================================================
-let datasetProducts = [];
-let cart = {};
-let currentCategory = 'todos';
-let currentSearch = '';
+    <script>
+    let datasetProducts = [];
+    let cart = {};
+    let currentCategory = 'todos';
+    let currentSearch = '';
 
-document.addEventListener("DOMContentLoaded", () => {
-    carregarProdutosDoServidor();
-});
-
-async function carregarProdutosDoServidor() {
-    try {
-        const resposta = await fetch('/api/produtos');
-        if (resposta.ok) {
-            datasetProducts = await resposta.json();
-            renderizarVitrine();
-        } else {
-            console.error("Erro ao puxar dados do catálogo.");
-        }
-    } catch (erro) {
-        console.error("Erro de rede ao conectar à API:", erro);
-    }
-}
-
-function switchView(view) {
-    if (view === 'admin') {
-        const token = localStorage.getItem('lari_admin_token');
-        if (token === 'Bearer sessao_valida_lari_premium') {
-            document.getElementById('view-client').classList.add('hidden');
-            document.getElementById('view-admin').classList.remove('hidden');
-            carregarProdutosAdmin();
-        } else {
-            const senhaDigitada = prompt("Digite a senha do painel da Larissa:");
-            if (senhaDigitada === null) return;
-            efetuarLoginAdmin(senhaDigitada);
-        }
-    } else {
-        document.getElementById('view-admin').classList.add('hidden');
-        document.getElementById('view-client').classList.remove('hidden');
+    document.addEventListener("DOMContentLoaded", () => {
         carregarProdutosDoServidor();
-    }
-}
+    });
 
-// CORRIGIDO: Nome da função unificado e sem espaços para evitar quebra de sintaxe
-async function efetuarLoginAdmin(senha) {
-    try {
-        const resposta = await fetch('/api/admin/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ senha: senha })
-        });
-        const resultado = await resposta.json();
-
-        if (resposta.ok && resultado.token) {
-            localStorage.setItem('lari_admin_token', resultado.token);
-            document.getElementById('view-client').classList.add('hidden');
-            document.getElementById('view-admin').classList.remove('hidden');
-            carregarProdutosAdmin();
-        } else {
-            alert(resultado.error || "Senha inválida.");
-        }
-    } catch (erro) {
-        console.error("Falha ao autenticar:", erro);
-        alert("Erro na conexão com o servidor.");
-    }
-}
-
-function logoutAdmin() {
-    localStorage.removeItem('lari_admin_token');
-    switchView('client');
-}
-
-async function carregarProdutosAdmin() {
-    try {
-        const resposta = await fetch('/api/produtos');
-        if (resposta.ok) {
-            datasetProducts = await resposta.json();
-
-            const totalAcervo = datasetProducts.reduce((acc, p) => acc + parseFloat(p.preco), 0);
-            document.getElementById('dash-faturamento').innerText = `R$ ${totalAcervo.toFixed(2)}`;
-            document.getElementById('dash-pedidos').innerText = datasetProducts.length;
-
-            const tbody = document.getElementById('admin-table-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            datasetProducts.forEach(p => {
-                tbody.innerHTML += `
-                <tr class="border-b border-neutral-100 hover:bg-neutral-50/50">
-                    <td class="p-4">
-                        <div class="flex items-center gap-3">
-                            <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg bg-neutral-100 shadow-sm">
-                            <div>
-                                <p class="font-medium text-neutral-900">${p.nome}</p>
-                                <p class="text-[10px] text-neutral-400 font-mono">${p.id_produto}</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-4 uppercase text-neutral-500 tracking-wider text-[10px]">${p.categoria}</td>
-                    <td class="p-4 font-semibold text-neutral-900">R$ ${parseFloat(p.preco).toFixed(2)}</td>
-                    <td class="p-4 text-center">
-                        <span class="px-2 py-1 text-[10px] rounded-full font-medium ${p.visivel ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-500'}">
-                            ${p.visivel ? 'Sim' : 'Não'}
-                        </span>
-                    </td>
-                    <td class="p-4 text-right">
-                        <button onclick="removerProduto('${p.id_produto}')" class="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors">
-                            Excluir
-                        </button>
-                    </td>
-                </tr>`;
-            });
-        }
-    } catch (erro) {
-        console.error("Erro no carregamento corporativo:", erro);
-    }
-}
-
-// CORRIGIDO: Nome alterado para bater exatamente com o "salvarProdutoCompleto()" do botão
-async function salvarProdutoCompleto(event) {
-    if (event) event.preventDefault();
-
-    const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
-    const nome = document.getElementById('prod-nome').value.trim();
-    const preco = document.getElementById('prod-preco').value.trim();
-    const categoria = document.getElementById('prod-categoria').value;
-    const fileInput = document.getElementById('prod-file'); // ID correto do input file do seu HTML
-
-    if (!nome || !preco || !categoria) {
-        alert("Preencha todos os campos obrigatórios.");
-        return;
-    }
-
-    const token = localStorage.getItem('lari_admin_token');
-    try {
-        let urlFoto = "";
-        if (fileInput && fileInput.files.length > 0) {
-            const formData = new FormData();
-            formData.append('foto', fileInput.files[0]);
-
-            const uploadRes = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Authorization': token },
-                body: formData
-            });
-            const uploadData = await uploadRes.json();
-            if (uploadRes.ok) {
-                urlFoto = uploadData.url;
+    async function carregarProdutosDoServidor() {
+        try {
+            const resposta = await fetch('/api/produtos');
+            if (resposta.ok) {
+                datasetProducts = await resposta.json();
+                renderizarVitrine();
             } else {
-                alert("Falha no upload da imagem: " + uploadData.error);
-                return;
+                console.error("Erro ao puxar dados do catálogo.");
+            }
+        } catch (erro) {
+            console.error("Erro de rede ao conectar à API:", erro);
+        }
+    }
+
+    // Adaptado para abrir o modal requintado em vez do prompt cru do sistema
+    function switchView(view) {
+        if (view === 'admin') {
+            const token = localStorage.getItem('lari_admin_token');
+            if (token === 'Bearer sessao_valida_lari_premium') {
+                document.getElementById('view-client').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                carregarProdutosAdmin();
+            } else {
+                document.getElementById('login-modal').classList.remove('hidden');
             }
         } else {
-            alert("A inclusão de uma foto do produto é obrigatória.");
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-client').classList.remove('hidden');
+            carregarProdutosDoServidor();
+        }
+    }
+
+    function fecharModalLogin() {
+        document.getElementById('login-modal').classList.add('hidden');
+        document.getElementById('admin-password-input').value = '';
+    }
+
+    function autenticarAdmin() {
+        const senhaDigitada = document.getElementById('admin-password-input').value;
+        if (!senhaDigitada) return;
+        fecharModalLogin();
+        efetuarLoginAdmin(senhaDigitada);
+    }
+
+    async function efetuarLoginAdmin(senha) {
+        try {
+            const resposta = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ senha: senha })
+            });
+            const resultado = await resposta.json();
+
+            if (resposta.ok && resultado.token) {
+                localStorage.setItem('lari_admin_token', resultado.token);
+                document.getElementById('view-client').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                carregarProdutosAdmin();
+            } else {
+                alert(resultado.error || "Senha inválida.");
+            }
+        } catch (erro) {
+            console.error("Falha ao autenticar:", erro);
+            alert("Erro na conexão com o servidor.");
+        }
+    }
+
+    function logoutAdmin() {
+        localStorage.removeItem('lari_admin_token');
+        switchView('client');
+    }
+
+    async function carregarProdutosAdmin() {
+        try {
+            const resposta = await fetch('/api/produtos');
+            if (resposta.ok) {
+                datasetProducts = await resposta.json();
+
+                const totalAcervo = datasetProducts.reduce((acc, p) => acc + parseFloat(p.preco || 0), 0);
+                document.getElementById('dash-faturamento').innerText = `R$ ${totalAcervo.toFixed(2)}`;
+                document.getElementById('dash-pedidos').innerText = datasetProducts.length;
+
+                const tbody = document.getElementById('admin-table-body');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+
+                datasetProducts.forEach(p => {
+                    tbody.innerHTML += `
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50/50">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg bg-neutral-100 shadow-sm">
+                                <div>
+                                    <p class="font-medium text-neutral-900">${p.nome}</p>
+                                    <p class="text-[10px] text-neutral-400 font-mono">${p.id_produto}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4 uppercase text-neutral-500 tracking-wider text-[10px]">${p.categoria}</td>
+                        <td class="p-4 font-semibold text-neutral-900">R$ ${parseFloat(p.preco || 0).toFixed(2)}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2 py-1 text-[10px] rounded-full font-medium ${p.visivel !== false ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-500'}">
+                                ${p.visivel !== false ? 'Sim' : 'Não'}
+                            </span>
+                        </td>
+                        <td class="p-4 text-right">
+                            <button onclick="removerProduto('${p.id_produto}')" class="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors">
+                                Excluir
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+            }
+        } catch (erro) {
+            console.error("Erro no carregamento corporativo:", erro);
+        }
+    }
+
+    async function salvarProdutoCompleto(event) {
+        if (event) event.preventDefault();
+
+        const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
+        const nome = document.getElementById('prod-nome').value.trim();
+        const preco = document.getElementById('prod-preco').value.trim();
+        const categoria = document.getElementById('prod-categoria').value;
+        const fileInput = document.getElementById('prod-file');
+
+        if (!nome || !preco || !categoria) {
+            alert("Preencha todos os campos obrigatórios.");
             return;
         }
 
-        const payload = {
-            id_produto: id_produto,
-            nome: nome,
-            preco: parseFloat(preco),
-            categoria: categoria,
-            foto: urlFoto,
-            visivel: true
-        };
+        const token = localStorage.getItem('lari_admin_token');
+        try {
+            let urlFoto = "";
+            if (fileInput && fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('foto', fileInput.files[0]);
 
-        const resposta = await fetch('/api/produtos', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify(payload)
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': token },
+                    body: formData
+                });
+                const uploadData = await uploadRes.json();
+                if (uploadRes.ok) {
+                    urlFoto = uploadData.url;
+                } else {
+                    alert("Falha no upload da imagem: " + uploadData.error);
+                    return;
+                }
+            } else {
+                alert("A inclusão de uma foto do produto é obrigatória.");
+                return;
+            }
+
+            const payload = {
+                id_produto: id_produto,
+                nome: nome,
+                preco: parseFloat(preco),
+                categoria: categoria,
+                foto: urlFoto,
+                visivel: true
+            };
+
+            const resposta = await fetch('/api/produtos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (resposta.ok) {
+                alert("Acessório curado com sucesso!");
+                limparFormulario();
+                carregarProdutosAdmin();
+            } else {
+                const err = await resposta.json();
+                alert("Erro ao salvar: " + err.error);
+            }
+        } catch (erro) {
+            console.error("Erro na operação:", erro);
+        }
+    }
+
+    async function removerProduto(idProd) {
+        if (!confirm("Remover permanentemente este item do acervo?")) return;
+        const token = localStorage.getItem('lari_admin_token');
+        try {
+            const resposta = await fetch(`/api/produtos/${idProd}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': token }
+            });
+            const resultado = await resposta.json();
+            if (resposta.ok) {
+                alert("Produto removido com sucesso!");
+                carregarProdutosAdmin();
+            } else {
+                alert(resultado.error || "Não foi possível excluir o produto.");
+            }
+        } catch (erro) {
+            console.error("Erro:", erro);
+        }
+    }
+
+    function limparFormulario() {
+        document.getElementById('prod-id').value = '';
+        document.getElementById('prod-nome').value = '';
+        document.getElementById('prod-preco').value = '';
+        const fileInput = document.getElementById('prod-file');
+        if (fileInput) fileInput.value = '';
+        document.getElementById('upload-placeholder-view').classList.remove('hidden');
+        document.getElementById('upload-preview-container').classList.add('hidden');
+        document.getElementById('upload-preview-img').src = '';
+    }
+
+    function renderizarVitrine() {
+        const grid = document.getElementById('products-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const filtrados = datasetProducts.filter(p => {
+            const bateCategoria = currentCategory === 'todos' || p.categoria === currentCategory;
+            const bateBusca = p.nome.toLowerCase().includes(currentSearch.toLowerCase()) || p.id_produto.toLowerCase().includes(currentSearch.toLowerCase());
+            return p.visivel !== false && bateCategoria && bateBusca;
         });
 
-        if (resposta.ok) {
-            alert("Acessório curado com sucesso!");
-            limparFormulario();
-            carregarProdutosAdmin();
-        } else {
-            const err = await resposta.json();
-            alert("Erro ao salvar: " + err.error);
+        if (filtrados.length === 0) {
+            grid.innerHTML = `<p class="col-span-full text-center text-neutral-400 py-12 font-light text-sm">Nenhum produto encontrado nesta coleção.</p>`;
+            return;
         }
-    } catch (erro) {
-        console.error("Erro na operação:", erro);
-    }
-}
 
-async function removerProduto(idProd) {
-    if (!confirm("Remover permanentemente este item do acervo?")) return;
-    const token = localStorage.getItem('lari_admin_token');
-    try {
-        const resposta = await fetch(`/api/produtos/${idProd}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': token }
-        });
-        const resultado = await resposta.json();
-        if (resposta.ok) {
-            alert("Produto removido com sucesso!");
-            carregarProdutosAdmin();
-        } else {
-            alert(resultado.error || "Não foi possível excluir o produto.");
-        }
-    } catch (erro) {
-        console.error("Erro:", erro);
-    }
-}
-
-function limparFormulario() {
-    document.getElementById('prod-id').value = '';
-    document.getElementById('prod-nome').value = '';
-    document.getElementById('prod-preco').value = '';
-    const fileInput = document.getElementById('prod-file');
-    if (fileInput) fileInput.value = '';
-}
-
-function renderizarVitrine() {
-    const grid = document.getElementById('products-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-
-    const filtrados = datasetProducts.filter(p => {
-        const bateCategoria = currentCategory === 'todos' || p.categoria === currentCategory;
-        const bateBusca = p.nome.toLowerCase().includes(currentSearch.toLowerCase()) || p.id_produto.toLowerCase().includes(currentSearch.toLowerCase());
-        return p.visivel && bateCategoria && bateBusca;
-    });
-
-    if (filtrados.length === 0) {
-        grid.innerHTML = `<p class="col-span-full text-center text-neutral-400 py-12 font-light text-sm">Nenhum produto encontrado nesta coleção.</p>`;
-        return;
-    }
-
-    filtrados.forEach(p => {
-        grid.innerHTML += `
-        <div class="group bg-white border border-neutral-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
-            <div class="relative aspect-square bg-neutral-50 overflow-hidden">
-                <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-            </div>
-            <div class="p-4 flex flex-col flex-grow justify-between gap-2">
-                <div>
-                    <span class="text-[9px] uppercase tracking-widest text-neutral-400 font-medium">${p.categoria}</span>
-                    <h4 class="font-medium text-sm text-neutral-900 group-hover:text-neutral-600 transition-colors mt-0.5 line-clamp-2">${p.nome}</h4>
+        filtrados.forEach(p => {
+            grid.innerHTML += `
+            <div class="group bg-white border border-neutral-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
+                <div class="relative aspect-square bg-neutral-50 overflow-hidden">
+                    <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                 </div>
-                <div class="flex items-center justify-between pt-1">
-                    <span class="font-bold text-base text-neutral-900">R$ ${parseFloat(p.preco).toFixed(2)}</span>
-                    <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="p-2 rounded-lg bg-neutral-50 hover:bg-black text-neutral-600 hover:text-white transition-all duration-300 shadow-sm">
-                        <span class="material-symbols-rounded text-sm block">shopping_bag</span>
-                    </button>
+                <div class="p-4 flex flex-col flex-grow justify-between gap-2">
+                    <div>
+                        <span class="text-[9px] uppercase tracking-widest text-neutral-400 font-medium">${p.categoria}</span>
+                        <h4 class="font-medium text-sm text-neutral-900 group-hover:text-neutral-600 transition-colors mt-0.5 line-clamp-2">${p.nome}</h4>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="font-bold text-base text-neutral-900">R$ ${parseFloat(p.preco || 0).toFixed(2)}</span>
+                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="p-2 rounded-lg bg-neutral-50 hover:bg-black text-neutral-600 hover:text-white transition-all duration-300 shadow-sm">
+                            <span class="material-symbols-rounded text-sm block">shopping_bag</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </div>`;
-    });
-}
-
-function syncSearch(val) {
-    currentSearch = val;
-    document.getElementById('search-input-pc').value = val;
-    document.getElementById('search-input-mobile').value = val;
-    renderizarVitrine();
-}
-
-function filterCategory(cat) {
-    currentCategory = cat;
-    document.querySelectorAll('.cat-btn').forEach(btn => {
-        btn.classList.remove('bg-black', 'text-white', 'font-semibold');
-        btn.classList.add('bg-neutral-50', 'border-neutral-200', 'text-neutral-600');
-    });
-    const activeBtn = document.getElementById(`btn-cat-${cat}`);
-    if (activeBtn) {
-        activeBtn.classList.remove('bg-neutral-50', 'border-neutral-200', 'text-neutral-600');
-        activeBtn.classList.add('bg-black', 'text-white', 'font-semibold');
-    }
-    renderizarVitrine();
-}
-
-function adicionarAoCarrinho(idProd) {
-    if (!cart[idProd]) cart[idProd] = 0;
-    cart[idProd]++;
-    atualizarIndicadoresSacola();
-}
-
-function atualizarIndicadoresSacola() {
-    let totalItens = 0;
-    let valorTotal = 0;
-
-    Object.keys(cart).forEach(id => {
-        const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-        if (p) {
-            totalItens += cart[id];
-            valorTotal += p.preco * cart[id];
-        }
-    });
-
-    const countPc = document.getElementById('cart-count-pc');
-    const countMob = document.getElementById('cart-count-mobile');
-    const totalMob = document.getElementById('cart-total-mobile');
-    const barMob = document.getElementById('cart-bar-mobile');
-
-    if (countPc) countPc.innerText = totalItens;
-    if (countMob) countMob.innerText = totalItens;
-    if (totalMob) totalMob.innerText = `R$ ${valorTotal.toFixed(2)}`;
-
-    if (barMob) {
-        if (totalItens > 0) {
-            barMob.classList.remove('translate-y-full');
-        } else {
-            barMob.classList.add('translate-y-full');
-        }
-    }
-}
-
-function toggleCheckoutModal() {
-    const modal = document.getElementById('checkout-modal');
-    if (!modal) return;
-    if (modal.classList.contains('hidden')) {
-        modal.classList.remove('hidden');
-        renderizarSacolaModal();
-    } else {
-        modal.classList.add('hidden');
-    }
-}
-
-function renderizarSacolaModal() {
-    const container = document.getElementById('cart-items-list'); // ID correto do container da sacola no seu HTML
-    if (!container) return;
-    container.innerHTML = '';
-
-    let subtotal = 0;
-
-    Object.keys(cart).forEach(id => {
-        const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-        if (p) {
-            const qtd = cart[id];
-            const totalItem = p.preco * qtd;
-            subtotal += totalItem;
-
-            container.innerHTML += `
-            <div class="flex items-center gap-4 py-3 border-b border-neutral-100">
-                <img src="${p.foto}" class="w-12 h-12 object-cover rounded-lg bg-neutral-50 shadow-sm">
-                <div class="flex-grow">
-                    <h5 class="font-medium text-xs text-neutral-900 leading-tight">${p.nome}</h5>
-                    <p class="text-[11px] font-semibold text-neutral-900 mt-1">${qtd}x R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                </div>
-                <button onclick="removerItemCarrinho('${id}')" class="p-1 text-neutral-400 hover:text-red-500 transition-colors">
-                    <span class="material-symbols-rounded text-sm">delete</span>
-                </button>
             </div>`;
+        });
+    }
+
+    function syncSearch(val) {
+        currentSearch = val;
+        document.getElementById('search-input-pc').value = val;
+        document.getElementById('search-input-mobile').value = val;
+        renderizarVitrine();
+    }
+
+    // Corrigido para garantir a sintaxe completa que faltava no fim do arquivo enviado
+    function filterCategory(cat) {
+        currentCategory = cat;
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            btn.classList.remove('bg-black', 'text-white', 'font-semibold');
+            btn.classList.add('bg-neutral-50', 'border-neutral-200', 'text-neutral-600', 'hover:text-black');
+        });
+        const activeBtn = document.getElementById(`btn-cat-${cat}`);
+        if (activeBtn) {
+            activeBtn.classList.remove('bg-neutral-50', 'border-neutral-200', 'text-neutral-600', 'hover:text-black');
+            activeBtn.classList.add('bg-black', 'text-white', 'font-semibold');
         }
-    });
-
-    if (Object.keys(cart).length === 0) {
-        container.innerHTML = `<p class="text-center text-neutral-400 text-xs py-12 font-light">Sua sacola está vazia.</p>`;
+        renderizarVitrine();
     }
 
-    const totalValueEl = document.getElementById('modal-total-value');
-    if (totalValueEl) totalValueEl.innerText = `R$ ${subtotal.toFixed(2)}`;
-}
-
-function removerItemCarrinho(id) {
-    if (cart[id]) {
-        cart[id]--;
-        if (cart[id] <= 0) delete cart[id];
-    }
-    atualizarIndicadoresSacola();
-    renderizarSacolaModal();
-}
-
-// CORRIGIDO: Nome alterado para bater com o "submitOrder()" chamado no botão do modal
-function submitOrder() {
-    const nome = document.getElementById('client-name').value.trim();
-    const fone = document.getElementById('client-phone').value.trim();
-    const endereco = document.getElementById('client-address').value.trim();
-
-    if (!nome || !fone || Object.keys(cart).length === 0) {
-        alert("Por favor, preencha seu nome, contato e certifique-se de que a sacola possui itens.");
-        return;
+    function adicionarAoCarrinho(idProd) {
+        if (!cart[idProd]) cart[idProd] = 0;
+        cart[idProd]++;
+        atualizarIndicadoresSacola();
     }
 
-    let msg = `🛍️ *Novo Pedido - LariAcessórios*\n\n`;
-    msg += `👤 *Cliente:* ${nome}\n`;
-    msg += `📞 *WhatsApp:* ${fone}\n`;
-    if (endereco) msg += `📍 *Endereço/Retirada:* ${endereco}\n`;
-    msg += `\n-----------------------------------\n📦 *Itens do Pedido:*\n`;
+    function atualizarIndicadoresSacola() {
+        let totalItens = 0;
+        let valorTotal = 0;
 
-    let subtotal = 0;
-    Object.keys(cart).forEach(id => {
-        const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-        if (p) {
-            const qtd = cart[id];
-            const totalItem = p.preco * qtd;
-            subtotal += totalItem;
-            msg += `• ${qtd}x ${p.nome} (R$ ${p.preco.toFixed(2)}) -> *R$ ${totalItem.toFixed(2)}*\n`;
+        Object.keys(cart).forEach(id => {
+            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+            if (p) {
+                totalItens += cart[id];
+                valorTotal += (p.preco || 0) * cart[id];
+            }
+        });
+
+        const countPc = document.getElementById('cart-count-pc');
+        const countMob = document.getElementById('cart-count-mobile');
+        const totalMob = document.getElementById('cart-total-mobile');
+        const barMob = document.getElementById('cart-bar-mobile');
+
+        if (countPc) countPc.innerText = totalItens;
+        if (countMob) countMob.innerText = totalItens;
+        if (totalMob) totalMob.innerText = `R$ ${valorTotal.toFixed(2)}`;
+
+        if (barMob) {
+            if (totalItens > 0) {
+                barMob.classList.remove('translate-y-full');
+            } else {
+                barMob.classList.add('translate-y-full');
+            }
         }
-    });
-
-    msg += `-----------------------------------\n`;
-    msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
-    msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
-
-    const foneEmpresa = "5591999999999"; 
-    const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
-}
-
-// Funções auxiliares para visualização do arquivo de imagem selecionado no painel
-function processImageFile(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('upload-placeholder-view').classList.add('hidden');
-            document.getElementById('upload-preview-container').classList.remove('hidden');
-            document.getElementById('upload-preview-img').src = e.target.result;
-        }
-        reader.readAsDataURL(input.files[0]);
     }
-}
-</script>
+
+    function toggleCheckoutModal() {
+        const modal = document.getElementById('checkout-modal');
+        if (!modal) return;
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+            renderizarSacolaModal();
+        } else {
+            modal.classList.add('hidden');
+        }
+    }
+
+    // Mantendo a renderização sem alterar uma linha de estilo do modal original
+    function renderizarSacolaModal() {
+        const container = document.getElementById('cart-items-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        let subtotal = 0;
+
+        Object.keys(cart).forEach(id => {
+            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+            if (p) {
+                const qtd = cart[id];
+                const totalItem = (p.preco || 0) * qtd;
+                subtotal += totalItem;
+
+                container.innerHTML += `
+                <div class="flex items-center gap-4 py-3 border-b border-neutral-100">
+                    <img src="${p.foto}" class="w-12 h-12 object-cover rounded-lg bg-neutral-50 shadow-sm">
+                    <div class="flex-grow">
+                        <h5 class="font-medium text-xs text-neutral-900 leading-tight">${p.nome}</h5>
+                        <p class="text-[11px] font-semibold text-neutral-900 mt-1">${qtd}x R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
+                    </div>
+                    <button onclick="removerItemCarrinho('${id}')" class="p-1 text-neutral-400 hover:text-red-500 transition-colors">
+                        <span class="material-symbols-rounded text-sm">delete</span>
+                    </button>
+                </div>`;
+            }
+        });
+
+        if (Object.keys(cart).length === 0) {
+            container.innerHTML = `<p class="text-center text-neutral-400 text-xs py-12 font-light">Sua sacola está vazia.</p>`;
+        }
+
+        const totalValueEl = document.getElementById('modal-total-value');
+        if (totalValueEl) totalValueEl.innerText = `R$ ${subtotal.toFixed(2)}`;
+    }
+
+    function removerItemCarrinho(id) {
+        if (cart[id]) {
+            cart[id]--;
+            if (cart[id] <= 0) delete cart[id];
+        }
+        atualizarIndicadoresSacola();
+        renderizarSacolaModal();
+    }
+
+    function enviarPedido() {
+        const nome = document.getElementById('client-name').value.trim();
+        const fone = document.getElementById('client-phone').value.trim();
+        const endereco = document.getElementById('client-address').value.trim();
+
+        if (!nome || !fone || Object.keys(cart).length === 0) {
+            alert("Por favor, preencha seu nome, contato e certifique-se de que a sacola possui itens.");
+            return;
+        }
+
+        let msg = `🛍️ *Novo Pedido - LariAcessórios*\n\n`;
+        msg += `👤 *Cliente:* ${nome}\n`;
+        msg += `📞 *WhatsApp:* ${fone}\n`;
+        if (endereco) msg += `📍 *Endereço/Retirada:* ${endereco}\n`;
+        msg += `\n-----------------------------------\n📦 *Itens do Pedido:*\n`;
+
+        let subtotal = 0;
+        Object.keys(cart).forEach(id => {
+            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+            if (p) {
+                const qtd = cart[id];
+                const totalItem = p.preco * qtd;
+                subtotal += totalItem;
+                msg += `• ${qtd}x ${p.nome} (R$ ${p.preco.toFixed(2)}) -> *R$ ${totalItem.toFixed(2)}*\n`;
+            }
+        });
+
+        msg += `-----------------------------------\n`;
+        msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
+        msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
+
+        const foneEmpresa = "5591982005830";
+        const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    }
+
+    function processImageFile(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('upload-placeholder-view').classList.add('hidden');
+                document.getElementById('upload-preview-container').classList.remove('hidden');
+                document.getElementById('upload-preview-img').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    </script>
 </body>
 </html>
