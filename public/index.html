@@ -285,210 +285,61 @@
     </div>
 
     <script>
-        let datasetProducts = [];
-        let cart = {};
-        let currentCategory = 'todos';
-        let currentSearchGlobal = '';
-        let tokenSessao = localStorage.getItem('token_admin') || null;
-
-        document.addEventListener("DOMContentLoaded", () => {
-            carregarProdutosDoBanco();
-            // Se já possui token salvo, tenta renderizar a view correta se for o caso
-            if (tokenSessao) {
-                atualizarDashboardMetricas();
-            }
-        });
-
-        async function carregarProdutosDoBanco() {
-            try {
-                const response = await fetch('/api/produtos');
-                if (response.ok) {
-                    datasetProducts = await response.json();
-                    renderClientProducts(currentSearchGlobal);
-                    atualizarDashboardMetricas();
-                    if(tokenSessao) renderAdminTable();
-                } else {
-                    console.error("Erro na resposta da API de listagem.");
-                }
-            } catch (err) {
-                console.error("Erro de conexão com o banco de dados:", err);
-            }
-        }
-
-        async function salvarProdutoCompleto() {
-            const id_existente = document.getElementById('prod-id').value;
-            const nome = document.getElementById('prod-nome').value.trim();
-            const preco = parseFloat(document.getElementById('prod-preco').value);
-            const categoryElement = document.getElementById('prod-categoria');
-            const categoria = categoryElement ? categoryElement.value : 'relogios';
-            const fileInput = document.getElementById('prod-file');
-            const file = fileInput ? fileInput.files[0] : null;
-
-            if(file){
-                const permitidos = ['image/jpeg','image/png','image/webp','image/jpg'];
-                if(!permitidos.includes(file.type)){
-                    alert('Formato inválido. Use JPG, PNG ou WEBP.');
-                    return;
-                }
-                if(file.size > 5 * 1024 * 1024){
-                    alert('Imagem maior que 5MB.');
-                    return;
-                }
-            }
-
-            if(!nome || isNaN(preco)) {
-                alert('Preencha os campos obrigatórios corretamente.');
-                return;
-            }
-
-            let urlFinalFoto = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500";
-
-            if (id_existente) {
-                const produtoAntigo = datasetProducts.find(p => String(p.id_produto) === String(id_existente));
-                if (produtoAntigo) urlFinalFoto = produtoAntigo.foto;
-            }
-
-            if(file) {
-                const formData = new FormData();
-                formData.append('foto', file);
-                try {
-                    const uploadResponse = await fetch('/api/upload', {
-                        method: 'POST',
-                        headers: { 'Authorization': tokenSessao },
-                        body: formData
-                    });
-                    const uploadResult = await uploadResponse.json();
-                    if(!uploadResponse.ok) throw new Error(uploadResult.error || "Erro de envio");
-                    urlFinalFoto = uploadResult.url;
-                } catch (err) {
-                    alert("Falha no upload da imagem: " + err.message);
-                    return;
-                }
-            }
-
-            const id_produto = id_existente || 'p_' + new Date().getTime();
-            const objetoProduto = { id_produto, nome, preco, categoria, foto: urlFinalFoto, visivel: true };
-
-            try {
-                const response = await fetch('/api/produtos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': tokenSessao
-                    },
-                    body: JSON.stringify(objetoProduto)
-                });
-
-                if (response.ok) {
-                    await carregarProdutosDoBanco();
-                    limparFormulario();
-                    alert("Catálogo atualizado com sucesso!");
-                } else {
-                    const errRes = await response.json();
-                    alert("Erro ao gravar produto: " + (errRes.error || "Rejeitado pelo servidor"));
-                }
-            } catch (err) {
-                alert("Erro na comunicação com o servidor backend.");
-            }
-        }
-
-        async function removerProduto(id) {
-            if(confirm("Tem certeza que deseja apagar permanentemente este acessório?")) {
-                try {
-                    const response = await fetch(`/api/produtos/${id}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': tokenSessao }
-                    });
-                    if (response.ok) {
-                        await carregarProdutosDoBanco();
-                    } else {
-                        alert("A API recusou a requisição de exclusão.");
-                    }
-                } catch(err) {
-                    alert("Erro de conexão ao remover produto.");
-                }
-            }
-        }
-
-        async function toggleVisibilidade(id) {
-            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-            if(p) {
-                p.visivel = !p.visivel;
-                try {
-                    const response = await fetch('/api/produtos', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': tokenSessao },
-                        body: JSON.stringify(p)
-                    });
-                    if(!response.ok) {
-                        throw new Error("Erro de resposta do servidor");
-                    }
-                    await carregarProdutosDoBanco();
-                } catch(err) {
-                    console.error("Erro ao chavear visibilidade do item:", err);
-                    p.visivel = !p.visivel;
-                }
-            }
-        }
-
-        function limparFormulario() {
-            document.getElementById('prod-id').value = '';
-            document.getElementById('prod-nome').value = '';
-            document.getElementById('prod-preco').value = '';
-            const fileInput = document.getElementById('prod-file');
-            if(fileInput) fileInput.value = '';
-            document.getElementById('form-title').innerText = "Curar Novo Acessório";
-            document.getElementById('btn-cancelar').classList.add('hidden');
-            document.getElementById('upload-placeholder-view').classList.remove('hidden');
-            document.getElementById('upload-preview-container').classList.replace('flex', 'hidden');
-        }
-
-        function processImageFile(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const base64Content = e.target.result;
-                    document.getElementById('upload-placeholder-view').classList.add('hidden');
-                    const previewContainer = document.getElementById('upload-preview-container');
-                    previewContainer.classList.remove('hidden');
-                    previewContainer.classList.add('flex');
-                    document.getElementById('upload-preview-img').src = base64Content;
-                }
-                reader.readAsDataURL(file);
-            }
-        }
- 
- 
-// ======================================================================
-// SISTEMA DE AUTENTICAÇÃO E CONTROLE DO PAINEL DA LARISSA
+     // ======================================================================
+// SISTEMA INTEGRADO DE FRONTEND - LARI ACESSÓRIOS (CORRIGIDO)
 // ======================================================================
 
-// 1. Redirecionamento e proteção de telas do Painel
+let datasetProducts = []; // Armazena a lista vinda do banco de dados
+let cart = {};           // Sacola de compras do cliente
+let currentCategory = 'todos';
+let currentSearch = '';
+
+// Executa automaticamente ao carregar a página
+document.addEventListener("DOMContentLoaded", () => {
+    carregarProdutosDoServidor();
+});
+
+// 1. CARREGAR PRODUTOS PÚBLICOS (VITRINE)
+async function carregarProdutosDoServidor() {
+    try {
+        const resposta = await fetch('/api/produtos');
+        if (resposta.ok) {
+            datasetProducts = await resposta.json();
+            renderizarVitrine();
+        } else {
+            console.error("Erro ao puxar dados do catálogo.");
+        }
+    } catch (erro) {
+        console.error("Erro de rede ao conectar à API:", erro);
+    }
+}
+
+// 2. ALTERNAR ENTRE TELAS (CLIENTE / ADMINISTRADOR)
 function switchView(view) {
     if (view === 'admin') {
         const token = localStorage.getItem('lari_admin_token');
-        
-        // Se já estiver logado com o token correto, abre direto o painel
-        if (token === 'sessao_valida_lari_premium') {
+
+        // Se já tiver uma sessão válida armazenada, entra direto no painel
+        if (token === 'Bearer sessao_valida_lari_premium') {
             document.getElementById('view-client').classList.add('hidden');
             document.getElementById('view-admin').classList.remove('hidden');
-            carregarProdutosAdmin(); // Função que renderiza a tabela do painel
+            carregarProdutosAdmin();
         } else {
-            // Caso contrário, solicita a senha através de um prompt limpo
-            const senhaDigitada = prompt("Introduza a senha de administração:");
+            // Solicita a senha via prompt limpo e direto
+            const senhaDigitada = prompt("Digite a senha do painel da Larissa:");
             if (senhaDigitada === null) return; // Cancelou o prompt
 
             efetuarLoginAdmin(senhaDigitada);
         }
     } else {
-        // Voltar para a vitrine pública
+        // Volta para a vitrine do cliente
         document.getElementById('view-admin').classList.add('hidden');
         document.getElementById('view-client').classList.remove('hidden');
+        carregarProdutosDoServidor(); // Atualiza a vitrine caso algo tenha mudado
     }
 }
 
-// 2. Requisição de Login integrada 100% com o index.py
+// 3. AUTENTICAÇÃO COM O ENDPOINT FLASK (Sincronizado 100%)
 async function efetuarLoginAdmin(senha) {
     try {
         const resposta = await fetch('/api/admin/login', {
@@ -496,311 +347,314 @@ async function efetuarLoginAdmin(senha) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            // Envia exatamente a chave "senha" que o Flask espera receber
-            body: JSON.stringify({ senha: senha }) 
+            // Envia exatamente a chave "senha" que o back-end em Python espera
+            body: JSON.stringify({ senha: senha })
         });
 
         const resultado = await resposta.json();
 
         if (resposta.ok && resultado.status === "success") {
-            // Armazena o token exato retornado pelo backend
-            localStorage.setItem('lari_admin_token', resultado.token);
-            
-            // Alterna os blocos de visualização na interface
+            // Guarda o token gerado formatado com o Bearer para uso nos cabeçalhos administrativos
+            localStorage.setItem('lari_admin_token', `Bearer ${resultado.token}`);
+
+            // Exibe a tela de administração
             document.getElementById('view-client').classList.add('hidden');
             document.getElementById('view-admin').classList.remove('hidden');
-            
-            // Atualiza os dados do dashboard e tabela administrativa
+
             carregarProdutosAdmin();
-            alert("Autenticação efetuada com sucesso! Bem-vinda, Larissa.");
+            alert("Autenticação efetuada! Bem-vinda, Larissa.");
         } else {
-            alert(resultado.error || "Senha incorreta para o perfil de administrador.");
+            alert(resultado.error || "Senha incorreta!");
         }
     } catch (erro) {
-        console.error("Erro na comunicação com o backend:", erro);
-        alert("Erro técnico: Não foi possível conectar ao subsistema de login.");
+        console.error("Erro na comunicação com o servidor:", erro);
+        alert("Erro técnico: Não foi possível alcançar o servidor.");
     }
 }
 
-// 3. Encerramento seguro de sessão (Logout)
+// 4. LOGOUT SEGURO
 function logoutAdmin() {
     localStorage.removeItem('lari_admin_token');
-    document.getElementById('view-admin').classList.add('hidden');
-    document.getElementById('view-client').classList.remove('hidden');
-    alert("Sessão administrativa encerrada.");
+    switchView('client');
 }
 
+// 5. ATUALIZAR TABELA DE GERENCIAMENTO (PAINEL ADMIN)
+async function carregarProdutosAdmin() {
+    try {
+        const resposta = await fetch('/api/produtos');
+        if (!resposta.ok) return;
 
+        datasetProducts = await resposta.json();
+        const tbody = document.getElementById('admin-products-table');
+        if (!tbody) return;
 
+        tbody.innerHTML = '';
 
+        datasetProducts.forEach(p => {
+            tbody.innerHTML += `
+                <tr class="border-b border-neutral-100 hover:bg-neutral-50/50">
+                    <td class="p-4 text-sm font-semibold text-neutral-900">${p.id_produto}</td>
+                    <td class="p-4">
+                        <img src="${p.foto}" class="w-12 h-12 object-cover rounded-lg bg-neutral-100">
+                    </td>
+                    <td class="p-4 text-sm font-medium text-neutral-800">${p.nome}</td>
+                    <td class="p-4 text-sm text-neutral-500 uppercase tracking-wider text-[11px]">${p.categoria}</td>
+                    <td class="p-4 text-sm font-bold text-neutral-900">R$ ${parseFloat(p.preco).toFixed(2)}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="removerProduto('${p.id_produto}')" class="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors">
+                            Excluir
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    } catch (erro) {
+        console.error("Erro ao listar painel:", erro);
+    }
+}
 
+// 6. ENVIAR NOVO PRODUTO COM ARQUIVO DE FOTO (UPLOAD + POST INTEGRADO)
+async function salvarProduto(event) {
+    if (event) event.preventDefault();
 
-      
+    const id_produto = document.getElementById('prod-id').value.trim();
+    const nome = document.getElementById('prod-name').value.trim();
+    const preco = document.getElementById('prod-price').value.trim();
+    const categoria = document.getElementById('prod-category').value;
+    const fileInput = document.getElementById('prod-image');
 
-        function syncSearch(value) {
-            currentSearchGlobal = value;
-            document.getElementById('search-input-pc').value = value;
-            document.getElementById('search-input-mobile').value = value;
-            renderClientProducts(value);
+    if (!id_produto || !nome || !preco || !categoria) {
+        alert("Preencha todos os campos obrigatórios.");
+        return;
+    }
+
+    const token = localStorage.getItem('lari_admin_token');
+
+    try {
+        let urlFoto = "";
+
+        // Se o usuário selecionou uma nova imagem, faz o upload primeiro
+        if (fileInput && fileInput.files.length > 0) {
+            const formData = new FormData();
+            formData.append('foto', fileInput.files[0]);
+
+            const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token // Passa a credencial necessária (Bearer ...)
+                },
+                body: formData
+            });
+
+            const uploadData = await uploadRes.json();
+            if (!uploadRes.ok) throw new Error(uploadData.error || "Falha no envio da imagem.");
+            urlFoto = uploadData.url;
+        } else {
+            alert("Por favor, selecione uma imagem para o produto.");
+            return;
         }
 
-        function filterCategory(cat) {
-            currentCategory = cat;
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                btn.classList.replace('bg-black', 'bg-neutral-50');
-                btn.classList.replace('text-white', 'text-neutral-600');
-                btn.classList.remove('font-semibold');
-            });
-            const activeBtn = document.getElementById(`btn-cat-${cat}`);
-            if (activeBtn) {
-                activeBtn.classList.replace('bg-neutral-50', 'bg-black');
-                activeBtn.classList.replace('text-neutral-600', 'text-white');
-                activeBtn.classList.add('font-semibold');
-            }
-            renderClientProducts(currentSearchGlobal);
+        // Salva os metadados do produto associando o link retornado da Vercel Blob
+        const produtoPayload = {
+            id_produto: id_produto,
+            nome: nome,
+            preco: parseFloat(preco),
+            categoria: categoria,
+            foto: urlFoto,
+            visivel: true
+        };
+
+        const postRes = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(produtoPayload)
+        });
+
+        const postData = await postRes.json();
+        if (postRes.ok) {
+            alert("Produto cadastrado com sucesso!");
+            document.getElementById('form-novo-produto').reset();
+            carregarProdutosAdmin(); // Recarrega a tabela administrativa
+        } else {
+            alert(postData.error || "Erro ao salvar no banco.");
         }
 
-        function renderClientProducts(searchQuery = '') {
-            const grid = document.getElementById('products-grid');
-            if(!grid) return;
-            grid.innerHTML = '';
+    } catch (erro) {
+        console.error("Operação abortada:", erro);
+        alert(erro.message || "Erro na conexão.");
+    }
+}
 
-            const filtrados = datasetProducts.filter(p => {
-                if(!p.visivel) return false;
-                if(currentCategory !== 'todos' && p.categoria !== currentCategory) return false;
-                if(searchQuery && !p.nome.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-                return true;
-            });
+// 7. EXCLUIR PRODUTO DO BANCO DE DADOS
+async function removerProduto(idProd) {
+    if (!confirm(`Deseja mesmo excluir o produto ${idProd}?`)) return;
 
-            if(filtrados.length === 0) {
-                grid.innerHTML = `<div class="col-span-full py-12 text-center text-neutral-400 text-xs font-light">Nenhum acessório disponível nesta seleção.</div>`;
-                return;
+    const token = localStorage.getItem('lari_admin_token');
+
+    try {
+        const resposta = await fetch(`/api/produtos/${encodeURIComponent(idProd)}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': token
             }
+        });
 
-            filtrados.forEach(p => {
-                const card = document.createElement('div');
-                card.className = "bg-white group border border-neutral-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between";
-                card.innerHTML = `
-                    <div class="relative overflow-hidden bg-neutral-50 aspect-square">
-                        <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+        const resultado = await resposta.json();
+        if (resposta.ok) {
+            alert("Produto removido com sucesso!");
+            carregarProdutosAdmin();
+        } else {
+            alert(resultado.error || "Não foi possível excluir o produto.");
+        }
+    } catch (erro) {
+        console.error("Erro na requisição DELETE:", erro);
+        alert("Erro ao conectar no servidor.");
+    }
+}
+
+// 8. RENDERIZAR A VITRINE DO CLIENTE (MÓDULO PÚBLICO)
+function renderizarVitrine() {
+    const grid = document.getElementById('products-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const filtrados = datasetProducts.filter(p => {
+        const bateCategoria = currentCategory === 'todos' || p.categoria === currentCategory;
+        const bateBusca = p.nome.toLowerCase().includes(currentSearch.toLowerCase()) ||
+                          p.id_produto.toLowerCase().includes(currentSearch.toLowerCase());
+        return p.visivel && bateCategoria && bateBusca;
+    });
+
+    if (filtrados.length === 0) {
+        grid.innerHTML = `<p class="col-span-full text-center text-neutral-400 py-12 font-light text-sm">Nenhum produto encontrado nesta coleção.</p>`;
+        return;
+    }
+
+    filtrados.forEach(p => {
+        grid.innerHTML += `
+            <div class="group bg-white border border-neutral-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
+                <div class="relative aspect-square bg-neutral-50 overflow-hidden">
+                    <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    <span class="absolute top-2 left-2 bg-white/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider text-neutral-600">${p.id_produto}</span>
+                </div>
+                <div class="p-4 flex-1 flex flex-col justify-between space-y-2">
+                    <div>
+                        <h4 class="font-medium text-neutral-800 text-sm line-clamp-2 leading-tight">${p.nome}</h4>
                     </div>
-                    <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
-                        <div>
-                            <span class="text-[9px] font-bold tracking-widest text-neutral-400 uppercase">${p.categoria}</span>
-                            <h4 class="text-xs font-medium text-neutral-800 line-clamp-2 mt-0.5">${p.nome}</h4>
-                        </div>
-                        <div class="flex items-center justify-between pt-2">
-                            <span class="text-sm font-bold text-black">R$ ${p.preco.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                            <button onclick="addToCart('${p.id_produto}')" class="p-2 rounded-xl bg-neutral-50 hover:bg-black text-neutral-700 hover:text-white transition-all">
-                                <span class="material-symbols-rounded text-sm flex">add_shopping_cart</span>
-                            </button>
-                        </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="font-bold text-neutral-900 text-base">R$ ${parseFloat(p.preco).toFixed(2)}</span>
+                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-neutral-800 transition-colors">
+                            + Sacola
+                        </button>
                     </div>
-                `;
-                grid.appendChild(card);
-            });
+                </div>
+            </div>
+        `;
+    });
+}
+
+// 9. REGRAS DE PESQUISA EM TEMPO REAL E CATEGORIAS
+function syncSearch(valor) {
+    currentSearch = valor;
+    const pcInput = document.getElementById('search-input-pc');
+    const mobInput = document.getElementById('search-input-mobile');
+    if (pcInput && pcInput.value !== valor) pcInput.value = valor;
+    if (mobInput && mobInput.value !== valor) mobInput.value = valor;
+
+    renderizarVitrine();
+}
+
+// 10. FILTRO DE CATEGORIAS DA VITRINE
+function filterCategory(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.classList.remove('bg-black', 'text-white', 'font-semibold');
+        btn.classList.add('bg-neutral-50', 'border-neutral-200', 'text-neutral-600');
+    });
+
+    const activeBtn = document.getElementById(`btn-cat-${cat}`);
+    if (activeBtn) {
+        activeBtn.classList.remove('bg-neutral-50', 'border-neutral-200', 'text-neutral-600');
+        activeBtn.classList.add('bg-black', 'text-white', 'font-semibold');
+    }
+    renderizarVitrine();
+}
+
+// 11. OPERAÇÕES DA SACOLA DE COMPRAS (CLIENTE -> WHATSAPP)
+function adicionarAoCarrinho(idProd) {
+    const p = datasetProducts.find(item => String(item.id_produto) === String(idProd));
+    if (!p) return;
+
+    if (!cart[idProd]) {
+        cart[idProd] = { nome: p.nome, preco: p.preco, qtd: 0 };
+    }
+    cart[idProd].qtd++;
+    atualizarIndicadoresSacola();
+}
+
+function atualizarIndicadoresSacola() {
+    let totalItens = 0;
+    let valorTotal = 0;
+
+    Object.keys(cart).forEach(id => {
+        totalItens += cart[id].qtd;
+        valorTotal += cart[id].preco * cart[id].qtd;
+    });
+
+    const countPc = document.getElementById('cart-count-pc');
+    const countMob = document.getElementById('cart-count-mobile');
+    const totalMob = document.getElementById('cart-total-mobile');
+    const barMob = document.getElementById('cart-bar-mobile');
+
+    if (countPc) countPc.innerText = totalItens;
+    if (countMob) countMob.innerText = totalItens;
+    if (totalMob) totalMob.innerText = `R$ ${valorTotal.toFixed(2)}`;
+
+    if (barMob) {
+        if (totalItens > 0) {
+            barMob.classList.remove('translate-y-full');
+        } else {
+            barMob.classList.add('translate-y-full');
         }
+    }
+}
 
-        function renderAdminTable() {
-            const tbody = document.getElementById('admin-table-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
+// 12. ENVIAR PEDIDO FORMATADO PARA O WHATSAPP
+function enviarPedido() {
+    const nome = document.getElementById('client-name').value.trim();
+    const fone = document.getElementById('client-phone').value.trim();
+    const endereco = document.getElementById('client-address').value.trim();
 
-            if(datasetProducts.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-neutral-400 text-xs font-light">Nenhum produto cadastrado no acervo.</td></tr>`;
-                return;
-            }
+    if (!nome || !fone || Object.keys(cart).length === 0) {
+        alert("Por favor, preencha o seu nome, contacto e adicione itens à sacola.");
+        return;
+    }
 
-            datasetProducts.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-neutral-50/80 transition-colors";
-                tr.innerHTML = `
-                    <td class="py-4 flex items-center gap-3">
-                        <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-100 shadow-sm shrink-0">
-                        <span class="font-medium text-neutral-800">${p.nome}</span>
-                    </td>
-                    <td class="py-4 text-neutral-500 uppercase tracking-wider text-[10px] font-semibold">${p.categoria}</td>
-                    <td class="py-4 font-bold text-black">R$ ${p.preco.toFixed(2)}</td>
-                    <td class="py-4 text-center">
-                        <button onclick="toggleVisibilidade('${p.id_produto}')" class="p-1 rounded-md ${p.visivel ? 'text-green-600 bg-green-50' : 'text-neutral-400 bg-neutral-100'} hover:scale-105 transition-all">
-                            <span class="material-symbols-rounded text-lg flex">${p.visivel ? 'visibility' : 'visibility_off'}</span>
-                        </button>
-                    </td>
-                    <td class="py-4 text-right space-x-1 whitespace-nowrap">
-                        <button onclick="carregarParaEdicao('${p.id_produto}')" class="p-2 rounded-lg bg-neutral-50 text-neutral-600 hover:bg-black hover:text-white transition-all">
-                            <span class="material-symbols-rounded text-sm flex">edit</span>
-                        </button>
-                        <button onclick="removerProduto('${p.id_produto}')" class="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all">
-                            <span class="material-symbols-rounded text-sm flex">delete</span>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+    let msg = `🛍️ *Novo Pedido - LariAcessórios*\n\n`;
+    msg += `👤 *Cliente:* ${nome}\n`;
+    msg += `📞 *WhatsApp:* ${fone}\n`;
+    if (endereco) msg += `📍 *Endereço/Retirada:* ${endereco}\n`;
+    msg += `\n-----------------------------------\n📦 *Itens do Pedido:*\n`;
 
-        function carregarParaEdicao(id) {
-            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-            if(p) {
-                document.getElementById('prod-id').value = p.id_produto;
-                document.getElementById('prod-nome').value = p.nome;
-                document.getElementById('prod-preco').value = p.preco;
-                document.getElementById('prod-categoria').value = p.categoria;
-                document.getElementById('form-title').innerText = "Editar Acessório";
-                document.getElementById('btn-cancelar').classList.remove('hidden');
+    let subtotal = 0;
+    Object.keys(cart).forEach(id => {
+        const item = cart[id];
+        const totalItem = item.preco * item.qtd;
+        subtotal += totalItem;
+        msg += `• ${item.qtd}x ${item.nome} (R$ ${parseFloat(item.preco).toFixed(2)}) -> *R$ ${totalItem.toFixed(2)}*\n`;
+    });
 
-                document.getElementById('upload-placeholder-view').classList.add('hidden');
-                const previewContainer = document.getElementById('upload-preview-container');
-                previewContainer.classList.remove('hidden');
-                previewContainer.classList.add('flex');
-                document.getElementById('upload-preview-img').src = p.foto;
-            }
-        }
+    msg += `-----------------------------------\n`;
+    msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
+    msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
 
-        function atualizarDashboardMetricas() {
-            let totalAcervo = 0;
-            datasetProducts.forEach(p => {
-                totalAcervo += (p.preco || 0);
-            });
-
-            const dashFaturamento = document.getElementById('dash-faturamento');
-            const dashPedidos = document.getElementById('dash-pedidos');
-
-            if(dashFaturamento) dashFaturamento.innerText = `R$ ${totalAcervo.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            if(dashPedidos) dashPedidos.innerText = datasetProducts.length.toString();
-        }
-
-        function toggleCheckoutModal() {
-            const modal = document.getElementById('checkout-modal');
-            if(!modal) return;
-            if(modal.classList.contains('hidden')) {
-                modal.classList.remove('hidden');
-                renderCartItems();
-            } else {
-                modal.classList.add('hidden');
-            }
-        }
-
-        function addToCart(id) {
-            if(!cart[id]) cart[id] = 0;
-            cart[id]++;
-            updateCartUI();
-
-            // Exibe a barra do carrinho no mobile animando a subida
-            const mobileBar = document.getElementById('cart-bar-mobile');
-            if(mobileBar) mobileBar.classList.remove('translate-y-full');
-        }
-
-        function removeFromCart(id) {
-            if(cart[id]) {
-                cart[id]--;
-                if(cart[id] <= 0) delete cart[id];
-            }
-            updateCartUI();
-            renderCartItems();
-        }
-
-        function updateCartUI() {
-            let totalItens = 0;
-            let valorTotal = 0;
-
-            Object.keys(cart).forEach(id => {
-                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-                if(p) {
-                    totalItens += cart[id];
-                    valorTotal += (p.preco * cart[id]);
-                }
-            });
-
-            document.getElementById('cart-count-pc').innerText = totalItens;
-            document.getElementById('cart-count-mobile').innerText = totalItens;
-
-            const totalStr = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            document.getElementById('cart-total-mobile').innerText = totalStr;
-            document.getElementById('modal-total-value').innerText = totalStr;
-
-            if(totalItens <= 0) {
-                const mobileBar = document.getElementById('cart-bar-mobile');
-                if(mobileBar) mobileBar.classList.add('translate-y-full');
-            }
-        }
-
-        function renderCartItems() {
-            const list = document.getElementById('cart-items-list');
-            if(!list) return;
-            list.innerHTML = '';
-
-            const keys = Object.keys(cart);
-            if(keys.length === 0) {
-                list.innerHTML = `<div class="py-12 text-center text-neutral-400 text-xs font-light flex flex-col items-center justify-center gap-2"><span class="material-symbols-rounded text-2xl">shopping_basket</span>Sua sacola está vazia</div>`;
-                return;
-            }
-
-            keys.forEach(id => {
-                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-                if(p) {
-                    const row = document.createElement('div');
-                    row.className = "flex items-center justify-between py-3 gap-3";
-                    row.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <img src="${p.foto}" class="w-12 h-12 object-cover rounded-xl border border-neutral-100 shadow-sm shrink-0">
-                            <div>
-                                <h5 class="text-xs font-medium text-neutral-800 line-clamp-1">${p.nome}</h5>
-                                <span class="text-xs font-bold text-black block mt-0.5">R$ ${p.preco.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-2.5 py-1 rounded-xl shrink-0">
-                            <button onclick="removeFromCart('${p.id_produto}')" class="text-neutral-500 hover:text-black font-bold text-sm">-</button>
-                            <span class="text-xs font-semibold px-1 min-w-[12px] text-center">${cart[id]}</span>
-                            <button onclick="addToCart('${p.id_produto}')" class="text-neutral-500 hover:text-black font-bold text-sm">+</button>
-                        </div>
-                    `;
-                    list.appendChild(row);
-                }
-            });
-        }
-
-        function submitOrder() {
-            const nome = document.getElementById('client-name').value.trim();
-            const fone = document.getElementById('client-phone').value.trim();
-            const endereço = document.getElementById('client-address').value.trim();
-
-            if(!nome || !fone) {
-                alert('Por favor, preencha seu Nome e WhatsApp de contato.');
-                return;
-            }
-
-            let msg = `🛍️ *Novo Pedido - LariAcessórios*\n\n`;
-            msg += `👤 *Cliente:* ${nome}\n`;
-            msg += `📞 *WhatsApp:* ${fone}\n`;
-            if(endereço) msg += `📍 *Endereço/Retirada:* ${endereço}\n`;
-            msg += `\n-----------------------------------\n📦 *Itens do Pedido:*\n`;
-
-            let subtotal = 0;
-            Object.keys(cart).forEach(id => {
-                const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-                if(p) {
-                    const qtd = cart[id];
-                    const totalItem = p.preco * qtd;
-                    subtotal += totalItem;
-                    msg += `• ${qtd}x ${p.nome} (R$ ${p.preco.toFixed(2)}) -> *R$ ${totalItem.toFixed(2)}*\n`;
-                }
-            });
-
-            msg += `-----------------------------------\n`;
-            msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
-            msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
-
-            const foneEmpresa = "5591983252639"; // TODO: Substitua pelo WhatsApp real da LariAcessórios
-            const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
-
-            // Limpa carrinho e fecha modal após o envio bem-sucedido
-            cart = {};
-            updateCartUI();
-            toggleCheckoutModal();
-
-            window.open(url, '_blank');
-        }
+    const foneEmpresa = "5591983252639"; // TODO: Substitua pelo WhatsApp real da LariAcessórios
+    const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+}
     </script>
 </body>
 </html>
