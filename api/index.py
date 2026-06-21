@@ -66,9 +66,13 @@ def login_administrador():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
 
-    if ADMIN_PASSWORD and senha_enviada == ADMIN_PASSWORD:
-        return jsonify({"status": "success", "token": "sessao_valida_lari_premium"}), 200
+    # O .strip() remove espaços em branco invisíveis do início e do fim
+    senha_sistema = ADMIN_PASSWORD.strip() if ADMIN_PASSWORD else None
+    senha_digitada = senha_enviada.strip() if senha_enviada else None
 
+    if senha_sistema and senha_digitada == senha_sistema:
+        return jsonify({"status": "success", "token": "sessao_valida_lari_premium"}), 200
+    
     return jsonify({"error": "Senha incorreta!"}), 401
 
 
