@@ -296,18 +296,17 @@
         carregarProdutosDoServidor();
     });
 
-    async function carregarProdutosDoServidor() {
-       // Dentro da função salvarProdutoCompleto
-try {
-    console.log("Tentando enviar para: /api/produtos"); // Isso vai aparecer no seu navegador
-    const resposta = await fetch('/api/produtos', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token
-        },
-        body: JSON.stringify(payload)
-    });
+async function carregarProdutosDoServidor() {
+    try {
+        const resposta = await fetch('/api/produtos');
+        if (resposta.ok) {
+            datasetProducts = await resposta.json();
+            renderizarVitrine();
+        }
+    } catch (erro) {
+        console.error("Erro ao carregar produtos:", erro);
+    }
+}
 
     const resultado = await resposta.json();
     console.log("Resposta do servidor:", resultado); // Veja se aparece algo aqui
