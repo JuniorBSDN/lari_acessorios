@@ -2,23 +2,23 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import requests
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import pg8000
 
-# Estrutura de caminhos do repositório (api/api/index.py sobe para public na raiz)
+# Estrutura de caminhos exata do repositório
 app = Flask(__name__, static_folder='../../public', static_url_path='')
 CORS(app)
 
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
-    "POSTGRES_URL_NON_POOLING")
+# Lê tanto a chave correta quanto qualquer variação com erro de digitação para garantir
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
 
 
 def obter_conexao():
     if not DATABASE_URL:
         raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    # Conectando via pg8000 para total compatibilidade com seu requirements.txt
+    conn = pg8000.connect(dsn=DATABASE_URL)
     conn.autocommit = True
     return conn
 
@@ -40,12 +40,16 @@ def inicializar_infraestrutura_banco():
             """)
             cursor.close()
             conn.close()
-            print("🚀 Banco de dados verificado com sucesso.")
+            print("🚀 Banco de dados inicializado.")
         except Exception as e:
-            print(f"⚠️ Inicialização do banco: {str(e)}")
+            print(f"⚠️ Alerta banco: {str(e)}")
 
 
-inicializar_infraestrutura_banco()
+# Inicialização protegida para evitar erros de Cold Start no serverless
+try:
+    inicializar_infraestrutura_banco()
+except Exception:
+    pass
 
 
 @app.route("/")
@@ -59,14 +63,14 @@ def servir_arquivos_estaticos(path):
 
 
 # ======================================================================
-# ENDPOINT DE AUTENTICAÇÃO DO ADMINISTRADOR
+# ENDPOINT DE AUTENTICAÇÃO DO ADMINISTRADOR (CONSOLIDADO)
 # ======================================================================
 @app.route("/api/admin/login", methods=["POST"])
 def login_administrador():
     dados = request.get_json() or {}
     senha_enviada = dados.get("senha")
 
-    # O .strip() remove espaços em branco invisíveis do início e do fim
+    # Tratamento contra espaços em branco acidentais
     senha_sistema = ADMIN_PASSWORD.strip() if ADMIN_PASSWORD else None
     senha_digitada = senha_enviada.strip() if senha_enviada else None
 
@@ -86,11 +90,11 @@ def upload_foto():
         return jsonify({"error": "Acesso não autorizado."}), 403
 
     if 'foto' not in request.files:
-        return jsonify({"error": "Nenhum arquivo de imagem enviado."}), 400
+        return jsonify({"error": "Nenhum arquivo enviado."}), 400
 
     file = request.files['foto']
     if file.filename == '':
-        return jsonify({"error": "Nome de arquivo inválido."}), 400
+        return jsonify({"error": "Arquivo inválido."}), 400
 
     ext = os.path.splitext(file.filename)[1].lower()
     content_type = file.content_type or "application/octet-stream"
@@ -98,7 +102,7 @@ def upload_foto():
     conteudo_binario = file.read()
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
-        return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente."}), 500
+        return jsonify({"error": "Token de upload ausente."}), 500
 
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
@@ -110,7 +114,7 @@ def upload_foto():
         resposta = requests.put(f"https://blob.vercel-storage.com/{nome_id}", data=conteudo_binario, headers=headers)
         if resposta.status_code == 200:
             return jsonify({"url": resposta.json()["url"]}), 200
-        return jsonify({"error": f"Erro na API Vercel Blob: {resposta.text}"}), 500
+        return jsonify({"error": f"Erro Vercel Blob: {resposta.text}"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -134,7 +138,7 @@ def gerenciar_produtos():
         visivel = dados.get("visivel") if dados.get("visivel") is not None else True
 
         if not id_produto or not nome or preco is None:
-            return jsonify({"error": "Metadados essenciais incompletos."}), 400
+            return jsonify({"error": "Campos incompletos."}), 400
 
         try:
             conn = obter_conexao()
@@ -152,18 +156,25 @@ def gerenciar_produtos():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    # Execução do método GET
+    # Método GET
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
         cursor.execute("SELECT id_produto, nome, preco, categoria, foto, visivel FROM produtos ORDER BY nome ASC;")
-        registros = cursor.fetchall()
+        linhas = cursor.fetchall()
         cursor.close()
         conn.close()
 
-        for r in registros:
-            r['preco'] = float(r['preco'])
-
+        registros = []
+        for l in linhas:
+            registros.append({
+                "id_produto": l[0],
+                "nome": l[1],
+                "preco": float(l[2]),
+                "categoria": l[3],
+                "foto": l[4],
+                "visivel": l[5]
+            })
         return jsonify(registros), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -186,14 +197,14 @@ def remover_produto_banco(id_prod):
         cursor.execute("DELETE FROM produtos WHERE id_produto = %s;", (id_limpo,))
         cursor.close()
         conn.close()
-        return jsonify({"status": "success", "message": f"Produto {id_limpo} removido com sucesso."}), 200
+        return jsonify({"status": "success", "message": f"Produto {id_limpo} removido."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.errorhandler(404)
 def rota_nao_encontrada(e):
-    return jsonify({"error": "Endpoint não encontrado no subsistema de backend.", "status": "API Ativa"}), 404
+    return jsonify({"error": "Endpoint não encontrado.", "status": "API Ativa"}), 404
 
 
 if __name__ == '__main__':
