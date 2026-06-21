@@ -412,7 +412,13 @@
     }
 
     async function salvarProdutoCompleto(event) {
-        if (event) event.preventDefault();
+        async function salvarProdutoCompleto(event) {
+    if (event) event.preventDefault();
+    
+    // DEBUG: Veja se os dados estão sendo lidos
+    console.log("Iniciando salvamento...");
+
+    const fileInput = document.getElementById('prod-file');
 
         const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
         const nome = document.getElementById('prod-nome').value.trim();
@@ -420,10 +426,11 @@
         const categoria = document.getElementById('prod-categoria').value;
         const fileInput = document.getElementById('prod-file');
 
-        if (!nome || !preco || !categoria) {
-            alert("Preencha todos os campos obrigatórios.");
-            return;
-        }
+        if (!fileInput || fileInput.files.length === 0) {
+        console.error("Nenhum arquivo de imagem encontrado!");
+        alert("A inclusão de uma foto do produto é obrigatória.");
+        return;
+    }
 
         const token = localStorage.getItem('lari_admin_token');
         try {
