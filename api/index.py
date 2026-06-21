@@ -4,9 +4,6 @@ import os
 import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import hmac
-import hashlib
-import time
 
 # Estrutura de caminhos do repositório (api/api/index.py sobe para public na raiz)
 app = Flask(__name__, static_folder='../../public', static_url_path='')
@@ -14,51 +11,16 @@ CORS(app)
 
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
-
-# Define a chave secreta baseada na senha do admin para assinar o token dinâmico
-SECRET_KEY = (ADMIN_PASSWORD or "fallback_seguro_desenvolvimento_local").encode()
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
+    "POSTGRES_URL_NON_POOLING")
 
 
 def obter_conexao():
     if not DATABASE_URL:
         raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
-    conn = psycopg2.connect(DATABASE_URL, sslmode="require", cursor_factory=RealDictCursor)
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     conn.autocommit = True
     return conn
-
-
-# ======================================================================
-# MOTOR DE SESSÃO DINÂMICA (HMAC CONTRA ENGENHARIA REVERSA)
-# ======================================================================
-def gerar_token_seguro():
-    """Gera um token com o timestamp atual e uma assinatura HMAC válida por 24h."""
-    timestamp = str(int(time.time()))
-    assinatura = hmac.new(SECRET_KEY, timestamp.encode(), hashlib.sha256).hexdigest()
-    return f"Bearer {timestamp}.{assinatura}"
-
-
-def validar_sessao():
-    """Valida o cabeçalho Authorization decodificando a assinatura e checando a expiração."""
-    auth_header = request.headers.get("Authorization", "").strip()
-    if not auth_header.startswith("Bearer "):
-        return False
-    
-    try:
-        token = auth_header.split(" ")[1]
-        timestamp_str, assinatura_recebida = token.split(".")
-        
-        # 1. Validação do tempo (Expira em 24 horas = 86400 segundos)
-        timestamp = int(timestamp_str)
-        if time.time() - timestamp > 86400:
-            return False  
-            
-        # 2. Validação da assinatura matemática
-        assinatura_esperada = hmac.new(SECRET_KEY, timestamp_str.encode(), hashlib.sha256).hexdigest()
-        
-        return hmac.compare_digest(assinatura_recebida, assinatura_esperada)
-    except Exception:
-        return False
 
 
 def inicializar_infraestrutura_banco():
@@ -97,34 +59,17 @@ def servir_arquivos_estaticos(path):
 
 
 # ======================================================================
-# LOGIN ADMIN (SUPORTA "senha" OU "password" PARA EVITAR CONFLITOS NO FRONT)
+# ENDPOINT DE AUTENTICAÇÃO DO ADMINISTRADOR
 # ======================================================================
-@app.route("/api/login", methods=["POST"])
 @app.route("/api/admin/login", methods=["POST"])
 def login_administrador():
     dados = request.get_json() or {}
-    
-    # Tolerância de mapeamento: busca por 'senha' ou 'password' enviados pelo front-end
-    senha = dados.get("senha") or dados.get("password")
-    senha = str(senha).strip() if senha is not None else ""
+    senha_enviada = dados.get("senha")
 
-    if not ADMIN_PASSWORD:
-        return jsonify({
-            "authenticated": False,
-            "error": "ADMIN_PASSWORD não configurada no ambiente da Vercel."
-        }), 500
+    if ADMIN_PASSWORD and senha_enviada == ADMIN_PASSWORD:
+        return jsonify({"status": "success", "token": "sessao_valida_lari_premium"}), 200
 
-    if senha == ADMIN_PASSWORD.strip():
-        return jsonify({
-            "authenticated": True,
-            "status": "success",
-            "token": gerar_token_seguro()  # Token dinâmico de 24h gerado aqui
-        }), 200
-
-    return jsonify({
-        "authenticated": False,
-        "error": "Senha incorreta."
-    }), 401
+    return jsonify({"error": "Senha incorreta!"}), 401
 
 
 # ======================================================================
@@ -132,8 +77,9 @@ def login_administrador():
 # ======================================================================
 @app.route("/api/upload", methods=["POST"])
 def upload_foto():
-    if not validar_sessao():
-        return jsonify({"error": "Acesso não autorizado ou sessão expirada."}), 403
+    token_sessao = request.headers.get("Authorization")
+    if token_sessao != "Bearer sessao_valida_lari_premium":
+        return jsonify({"error": "Acesso não autorizado."}), 403
 
     if 'foto' not in request.files:
         return jsonify({"error": "Nenhum arquivo de imagem enviado."}), 400
@@ -143,17 +89,9 @@ def upload_foto():
         return jsonify({"error": "Nome de arquivo inválido."}), 400
 
     ext = os.path.splitext(file.filename)[1].lower()
-    permitidos = {".jpg", ".jpeg", ".png", ".webp"}
-
-    if ext not in permitidos:
-        return jsonify({"error": "Formato inválido."}), 400
-        
     content_type = file.content_type or "application/octet-stream"
     nome_id = f"produtos/produto_{os.urandom(4).hex()}{ext}"
     conteudo_binario = file.read()
-    
-    if len(conteudo_binario) > 5 * 1024 * 1024:
-        return jsonify({"error": "Imagem maior que 5MB."}), 400
 
     if not VERCEL_BLOB_READ_WRITE_TOKEN:
         return jsonify({"error": "Token BLOB_READ_WRITE_TOKEN ausente."}), 500
@@ -179,8 +117,9 @@ def upload_foto():
 @app.route("/api/produtos", methods=["GET", "POST"])
 def gerenciar_produtos():
     if request.method == "POST":
-        if not validar_sessao():
-            return jsonify({"error": "Acesso não autorizado ou sessão expirada."}), 403
+        token_sessao = request.headers.get("Authorization")
+        if token_sessao != "Bearer sessao_valida_lari_premium":
+            return jsonify({"error": "Acesso não autorizado."}), 403
 
         dados = request.get_json() or {}
         id_produto = dados.get("id_produto")
@@ -229,10 +168,11 @@ def gerenciar_produtos():
 # ======================================================================
 # ENDPOINT DE EXCLUSÃO DE PRODUTO (DELETE)
 # ======================================================================
-@app.route("/api/produtos/<string:id_prod>", methods=["DELETE"])
+@app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
-    if not validar_sessao():
-        return jsonify({"error": "Acesso não autorizado ou sessão expirada."}), 403
+    token_sessao = request.headers.get("Authorization")
+    if token_sessao != "Bearer sessao_valida_lari_premium":
+        return jsonify({"error": "Acesso não autorizado."}), 403
 
     id_limpo = str(id_prod).strip()
 
