@@ -298,14 +298,31 @@
 
     async function carregarProdutosDoServidor() {
        // Dentro da função salvarProdutoCompleto
-const resposta = await fetch('/api/produtos', { // Verifique se está exatamente '/api/produtos'
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token
-    },
-    body: JSON.stringify(payload)
-});
+try {
+    console.log("Tentando enviar para: /api/produtos"); // Isso vai aparecer no seu navegador
+    const resposta = await fetch('/api/produtos', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const resultado = await resposta.json();
+    console.log("Resposta do servidor:", resultado); // Veja se aparece algo aqui
+
+    if (resposta.ok) {
+        alert("Acessório curado com sucesso!");
+        limparFormulario();
+        carregarProdutosAdmin();
+    } else {
+        alert("Erro ao salvar: " + (resultado.error || "Erro desconhecido"));
+    }
+} catch (erro) {
+    console.error("Erro completo:", erro);
+    alert("Erro na conexão! Verifique o console do navegador.");
+}
 
     // Adaptado para abrir o modal requintado em vez do prompt cru do sistema
     function switchView(view) {
