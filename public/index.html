@@ -309,21 +309,27 @@
     }
 
     function switchView(view) {
-        if (view === 'admin') {
-            const token = localStorage.getItem('lari_admin_token');
-            if (token === 'Bearer sessao_valida_lari_premium') {
-                document.getElementById('view-client').classList.add('hidden');
-                document.getElementById('view-admin').classList.remove('hidden');
-                carregarProdutosAdmin();
-            } else {
-                document.getElementById('login-modal').classList.remove('hidden');
-            }
+    if (view === 'admin') {
+        const token = localStorage.getItem('lari_admin_token');
+        // Se o token já for válido, entra direto no painel
+        if (token === 'Bearer sessao_valida_lari_premium') {
+            document.getElementById('view-client').classList.add('hidden');
+            document.getElementById('view-admin').classList.remove('hidden');
+            carregarProdutosAdmin();
         } else {
-            document.getElementById('view-admin').classList.add('hidden');
-            document.getElementById('view-client').classList.remove('hidden');
-            carregarProdutosDoServidor();
+            // Se não tiver token ou for inválido, força a abertura do modal de senha
+            document.getElementById('login-modal').classList.remove('hidden');
+            // Garante o foco no campo de senha para facilitar
+            setTimeout(() => {
+                document.getElementById('admin-password-input').focus();
+            }, 50);
         }
+    } else {
+        document.getElementById('view-admin').classList.add('hidden');
+        document.getElementById('view-client').classList.remove('hidden');
+        carregarProdutosDoServidor();
     }
+}
 
     function fecharModalLogin() {
         document.getElementById('login-modal').classList.add('hidden');
