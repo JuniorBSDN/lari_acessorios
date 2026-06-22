@@ -316,7 +316,6 @@
                 document.getElementById('view-admin').classList.remove('hidden');
                 carregarProdutosAdmin();
             } else {
-                // Remove a classe hidden para garantir que o modal apareça visualmente
                 document.getElementById('login-modal').classList.remove('hidden');
                 setTimeout(() => {
                     document.getElementById('admin-password-input').focus();
@@ -341,7 +340,7 @@
         efetuarLoginAdmin(senhaDigitada);
     }
 
- async function efetuarLoginAdmin(senha) {
+    async function efetuarLoginAdmin(senha) {
         try {
             const resposta = await fetch('/api/admin/login', {
                 method: 'POST',
@@ -363,6 +362,7 @@
             alert("Erro na conexão com o servidor.");
         }
     }
+
     function logoutAdmin() {
         localStorage.removeItem('lari_admin_token');
         switchView('client');
@@ -505,8 +505,6 @@
         document.getElementById('upload-preview-img').src = '';
     }
 
-    // Tarjetas de la vitrina (Comentário corrigido com as duas barras)
-    // Renderiza os cards da vitrine de forma responsiva e elegante
     function renderizarVitrine() {
         const grid = document.getElementById('products-grid');
         if (!grid) return;
@@ -547,7 +545,6 @@
         });
     }
 
-    // Gerenciamento e sincronização do carrinho/sacola
     function adicionarAoCarrinho(id) {
         cart[id] = (cart[id] || 0) + 1;
         atualizarUI();
@@ -566,10 +563,7 @@
             }
         }
 
-        // Interface Desktop
         document.getElementById('cart-count-pc').innerText = totalItens;
-        
-        // Interface Mobile
         document.getElementById('cart-count-mobile').innerText = totalItens;
         document.getElementById('cart-total-mobile').innerText = `R$ ${totalValor.toFixed(2)}`;
 
@@ -645,7 +639,6 @@
         renderizarVitrine();
     }
 
-    // Filtros por Categorias de Coleção
     function filterCategory(cat) {
         currentCategory = cat;
         document.querySelectorAll('.cat-btn').forEach(btn => {
@@ -661,7 +654,6 @@
         renderizarVitrine();
     }
 
-    // Sincronização e controle das barras de pesquisa (PC e Mobile)
     function syncSearch(val) {
         currentSearch = val;
         document.getElementById('search-input-pc').value = val;
@@ -669,7 +661,6 @@
         renderizarVitrine();
     }
 
-    // Processamento estético da pré-visualização de imagem selecionada no upload
     function processImageFile(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -682,7 +673,6 @@
         }
     }
 
-    // Consolida o pedido final da sacola e faz o despacho estruturado para o WhatsApp
     function enviarPedido() {
         const nome = document.getElementById('client-name').value.trim();
         const tel = document.getElementById('client-phone').value.trim();
@@ -695,7 +685,7 @@
 
         let temItens = false;
         let msg = `Olá! Gostaria de fazer um pedido na *LariAcessórios*:\n\n`;
-        
+
         for (const id in cart) {
             const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
             if (prod) {
