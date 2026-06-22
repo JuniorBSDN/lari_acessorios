@@ -108,9 +108,9 @@
                     <h3 class="hidden lg:block text-xs tracking-widest text-neutral-400 uppercase font-bold mb-4">Coleções</h3>
                     <div class="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar pb-1">
                         <button id="btn-cat-todos" onclick="filterCategory('todos')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left w-full">Todos os Produtos</button>
-                        <button id="btn-cat-relogios" onclick="filterCategory('relogios')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">🕰️ Relógios</button>
-                        <button id="btn-cat-cordoes" onclick="filterCategory('cordoes')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">✨ Cordões</button>
-                        <button id="btn-cat-bolsas" onclick="filterCategory('bolsas')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">👜 Bolsas Premium</button>
+                        <button id="btn-cat-relogios" onclick="filterCategory('relogios')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full"> 🕰️ Relógios</button>
+                        <button id="btn-cat-cordoes" onclick="filterCategory('cordoes')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full"> ✨ Cordões</button>
+                        <button id="btn-cat-bolsas" onclick="filterCategory('bolsas')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full"> 👜 Bolsas Premium</button>
                     </div>
                 </div>
             </aside>
@@ -411,9 +411,7 @@
         }
     }
 
-    async function salvarProdutoCompleto(event) {
-        if (event) event.preventDefault();
-
+    async function salvarProdutoCompleto() {
         console.log("Iniciando salvamento...");
 
         const fileInput = document.getElementById('prod-file');
@@ -506,6 +504,7 @@
         document.getElementById('upload-preview-img').src = '';
     }
 
+     Tarjetas de la vitrina
     function renderizarVitrine() {
         const grid = document.getElementById('products-grid');
         if (!grid) return;
