@@ -414,8 +414,7 @@
 
       async function salvarProdutoCompleto(event) {
     if (event) event.preventDefault();
-
-    console.log("Iniciando salvamento...");
+    console.log("Iniciando processo de salvamento...");
 
     const fileInput = document.getElementById('prod-file');
     const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
