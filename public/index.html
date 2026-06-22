@@ -343,7 +343,6 @@
 
  async function efetuarLoginAdmin(senha) {
         try {
-            // Rota relativa original idêntica à que funcionava antes
             const resposta = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -364,7 +363,6 @@
             alert("Erro na conexão com o servidor.");
         }
     }
-
     function logoutAdmin() {
         localStorage.removeItem('lari_admin_token');
         switchView('client');
