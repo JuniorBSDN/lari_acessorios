@@ -284,7 +284,7 @@
         </div>
     </div>
 
-    <script>
+   <script>
     let datasetProducts = [];
     let cart = {};
     let currentCategory = 'todos';
@@ -309,27 +309,25 @@
     }
 
     function switchView(view) {
-    if (view === 'admin') {
-        const token = localStorage.getItem('lari_admin_token');
-        // Se o token já for válido, entra direto no painel
-        if (token === 'Bearer sessao_valida_lari_premium') {
-            document.getElementById('view-client').classList.add('hidden');
-            document.getElementById('view-admin').classList.remove('hidden');
-            carregarProdutosAdmin();
+        if (view === 'admin') {
+            const token = localStorage.getItem('lari_admin_token');
+            if (token === 'Bearer sessao_valida_lari_premium') {
+                document.getElementById('view-client').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                carregarProdutosAdmin();
+            } else {
+                // Remove a classe hidden para garantir que o modal apareça visualmente
+                document.getElementById('login-modal').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('admin-password-input').focus();
+                }, 50);
+            }
         } else {
-            // Se não tiver token ou for inválido, força a abertura do modal de senha
-            document.getElementById('login-modal').classList.remove('hidden');
-            // Garante o foco no campo de senha para facilitar
-            setTimeout(() => {
-                document.getElementById('admin-password-input').focus();
-            }, 50);
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-client').classList.remove('hidden');
+            carregarProdutosDoServidor();
         }
-    } else {
-        document.getElementById('view-admin').classList.add('hidden');
-        document.getElementById('view-client').classList.remove('hidden');
-        carregarProdutosDoServidor();
     }
-}
 
     function fecharModalLogin() {
         document.getElementById('login-modal').classList.add('hidden');
@@ -418,8 +416,6 @@
     }
 
     async function salvarProdutoCompleto() {
-        console.log("Iniciando salvamento...");
-
         const fileInput = document.getElementById('prod-file');
         const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
         const nome = document.getElementById('prod-nome').value.trim();
@@ -510,7 +506,7 @@
         document.getElementById('upload-preview-img').src = '';
     }
 
-     Tarjetas de la vitrina
+    // Tarjetas de la vitrina (Comentário corrigido com as duas barras)
     function renderizarVitrine() {
         const grid = document.getElementById('products-grid');
         if (!grid) return;
