@@ -720,12 +720,81 @@ function atualizarUI() {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                document.getElementById('upload-placeholder-view').classList.remove('hidden');
+                document.getElementById('upload-placeholder-view').classList.add('hidden');
+                document.getElementById('upload-preview-container').classList.remove('flex');
                 document.getElementById('upload-preview-container').classList.remove('hidden');
+                document.getElementById('upload-preview-container').classList.add('flex');
                 document.getElementById('upload-preview-img').src = e.target.result;
             }
             reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    function filterCategory(cat) {
+        currentCategory = cat;
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            btn.classList.remove('bg-black', 'text-white', 'font-semibold');
+            btn.classList.add('bg-neutral-50', 'text-neutral-600');
+        });
+        document.getElementById(`btn-cat-${cat}`).classList.add('bg-black', 'text-white', 'font-semibold');
+        renderizarVitrine();
+    }
+
+    function syncSearch(val) {
+        currentSearch = val;
+        renderizarVitrine();
+    }
+
+    function renderizarSacola() {
+        const list = document.getElementById('cart-items-list');
+        list.innerHTML = '';
+        let total = 0;
+
+        for (const id in cart) {
+            const prod = datasetProducts.find(p => p.id_produto === id);
+            if (prod && cart[id] > 0) {
+                total += prod.preco * cart[id];
+                list.innerHTML += `
+                <div class="flex items-center gap-4 py-2">
+                    <img src="${prod.foto}" class="w-12 h-12 rounded-lg object-cover">
+                    <div class="flex-1">
+                        <p class="text-sm font-medium">${prod.nome}</p>
+                        <p class="text-xs text-neutral-500">${cart[id]} x R$ ${prod.preco.toFixed(2)}</p>
+                    </div>
+                    <button onclick="removerDoCarrinho('${id}')" class="text-neutral-400 hover:text-red-500">
+                        <span class="material-symbols-rounded text-lg">delete</span>
+                    </button>
+                </div>`;
+            }
+        }
+        document.getElementById('modal-total-value').innerText = `R$ ${total.toFixed(2)}`;
+    }
+
+    function removerDoCarrinho(id) {
+        delete cart[id];
+        atualizarUI();
+        renderizarSacola();
+    }
+
+    function enviarPedido() {
+        const nome = document.getElementById('client-name').value;
+        const tel = document.getElementById('client-phone').value;
+        const end = document.getElementById('client-address').value;
+
+        if (!nome || !tel) {
+            alert("Por favor, preencha seu nome e WhatsApp.");
+            return;
+        }
+
+        let msg = `Olá! Gostaria de fazer um pedido na LariAcessórios:\n\n`;
+        for (const id in cart) {
+            const prod = datasetProducts.find(p => p.id_produto === id);
+            msg += `- ${prod.nome} (${cart[id]}x)\n`;
+        }
+        msg += `\n*Total:* ${document.getElementById('modal-total-value').innerText}`;
+        msg += `\n\n*Cliente:* ${nome}\n*Contato:* ${tel}\n*Endereço:* ${end}`;
+
+        window.open(`https://wa.me/55SEUNUMERO?text=${encodeURIComponent(msg)}`, '_blank');
     }
     </script>
 </body>
