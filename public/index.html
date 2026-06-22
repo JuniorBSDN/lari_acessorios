@@ -540,64 +540,6 @@
         });
     }
 
-    // Adicione também a função de busca e a lógica do carrinho para completar a vitrine
-    function syncSearch(val) {
-        currentSearch = val;
-        renderizarVitrine();
-    }
-
-    function filterCategory(cat) {
-        currentCategory = cat;
-        document.querySelectorAll('.cat-btn').forEach(btn => {
-            btn.classList.remove('bg-black', 'text-white', 'font-semibold');
-            btn.classList.add('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
-        });
-        document.getElementById(`btn-cat-${cat}`).classList.add('bg-black', 'text-white', 'font-semibold');
-        renderizarVitrine();
-    }
-
-    function toggleCheckoutModal() {
-        const modal = document.getElementById('checkout-modal');
-        modal.classList.toggle('hidden');
-    }
-
-function atualizarUI() {
-    const totalItens = Object.values(cart).reduce((a, b) => a + b, 0);
-    document.getElementById('cart-count-mobile').innerText = totalItens;
-    document.getElementById('cart-count-pc').innerText = totalItens;
-
-    // Mostra a barra mobile se houver itens
-    const bar = document.getElementById('cart-bar-mobile');
-    if (totalItens > 0) {
-        bar.classList.remove('translate-y-full');
-    }
-}
-
-
-    function processImageFile(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('upload-preview-img').src = e.target.result;
-                document.getElementById('upload-placeholder-view').classList.add('hidden');
-                document.getElementById('upload-preview-container').classList.remove('hidden');
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-        const activeBtn = document.getElementById(`btn-cat-${cat}`);
-        if (activeBtn) {
-            activeBtn.classList.remove('bg-neutral-50', 'border-neutral-200', 'text-neutral-600', 'hover:text-black');
-            activeBtn.classList.add('bg-black', 'text-white', 'font-semibold');
-        }
-        renderizarVitrine();
-    }
-
-    function adicionarAoCarrinho(id) {
-    cart[id] = (cart[id] || 0) + 1;
-    atualizarUI();
-}
 
     function atualizarIndicadoresSacola() {
         let totalItens = 0;
@@ -629,99 +571,11 @@ function atualizarUI() {
         }
     }
 
-    function toggleCheckoutModal() {
-    const modal = document.getElementById('checkout-modal');
-    modal.classList.toggle('hidden');
-    renderizarSacola();
-}
-
-    function renderizarSacolaModal() {
-        const container = document.getElementById('cart-items-list');
-        if (!container) return;
-        container.innerHTML = '';
-
-        let subtotal = 0;
-
-        Object.keys(cart).forEach(id => {
-            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-            if (p) {
-                const qtd = cart[id];
-                const totalItem = (p.preco || 0) * qtd;
-                subtotal += totalItem;
-
-                container.innerHTML += `
-                <div class="flex items-center gap-4 py-3 border-b border-neutral-100">
-                    <img src="${p.foto}" class="w-12 h-12 object-cover rounded-lg bg-neutral-50 shadow-sm">
-                    <div class="flex-grow">
-                        <h5 class="font-medium text-xs text-neutral-900 leading-tight">${p.nome}</h5>
-                        <p class="text-[11px] font-semibold text-neutral-900 mt-1">${qtd}x R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
-                    </div>
-                    <button onclick="removerItemCarrinho('${id}')" class="p-1 text-neutral-400 hover:text-red-500 transition-colors">
-                        <span class="material-symbols-rounded text-sm">delete</span>
-                    </button>
-                </div>`;
-            }
-        });
-
-        if (Object.keys(cart).length === 0) {
-            container.innerHTML = `<p class="text-center text-neutral-400 text-xs py-12 font-light">Sua sacola está vazia.</p>`;
-        }
-
-        const totalValueEl = document.getElementById('modal-total-value');
-        if (totalValueEl) totalValueEl.innerText = `R$ ${subtotal.toFixed(2)}`;
-    }
-
-    function removerItemCarrinho(id) {
-        if (cart[id]) {
-            cart[id]--;
-            if (cart[id] <= 0) delete cart[id];
-        }
-        atualizarIndicadoresSacola();
-        renderizarSacolaModal();
-    }
-
-    function enviarPedido() {
-        const nome = document.getElementById('client-name').value.trim();
-        const fone = document.getElementById('client-phone').value.trim();
-        const endereco = document.getElementById('client-address').value.trim();
-
-        if (!nome || !fone || Object.keys(cart).length === 0) {
-            alert("Por favor, preencha seu nome, contato e certifique-se de que a sacola possui itens.");
-            return;
-        }
-
-        let msg = `🛍️ *Novo Pedido - LariAcessórios*\n\n`;
-        msg += `👤 *Cliente:* ${nome}\n`;
-        msg += `📞 *WhatsApp:* ${fone}\n`;
-        if (endereco) msg += `📍 *Endereço/Retirada:* ${endereco}\n`;
-        msg += `\n-----------------------------------\n📦 *Itens do Pedido:*\n`;
-
-        let subtotal = 0;
-        Object.keys(cart).forEach(id => {
-            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-            if (p) {
-                const qtd = cart[id];
-                const totalItem = p.preco * qtd;
-                subtotal += totalItem;
-                msg += `• ${qtd}x ${p.nome} (R$ ${p.preco.toFixed(2)}) -> *R$ ${totalItem.toFixed(2)}*\n`;
-            }
-        });
-
-        msg += `-----------------------------------\n`;
-        msg += `💰 *Valor Total: R$ ${subtotal.toFixed(2)}*\n\n`;
-        msg += `_Aguardo a confirmação de disponibilidade para prosseguir!_`;
-
-        const foneEmpresa = "5591982005830";
-        const url = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
-        window.open(url, '_blank');
-    }
-
-    function processImageFile(input) {
+function processImageFile(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 document.getElementById('upload-placeholder-view').classList.add('hidden');
-                document.getElementById('upload-preview-container').classList.remove('flex');
                 document.getElementById('upload-preview-container').classList.remove('hidden');
                 document.getElementById('upload-preview-container').classList.add('flex');
                 document.getElementById('upload-preview-img').src = e.target.result;
@@ -743,6 +597,27 @@ function atualizarUI() {
     function syncSearch(val) {
         currentSearch = val;
         renderizarVitrine();
+    }
+
+    function toggleCheckoutModal() {
+        const modal = document.getElementById('checkout-modal');
+        modal.classList.toggle('hidden');
+        if (!modal.classList.contains('hidden')) renderizarSacola();
+    }
+
+    function adicionarAoCarrinho(id) {
+        cart[id] = (cart[id] || 0) + 1;
+        atualizarUI();
+    }
+
+    function atualizarUI() {
+        const totalItens = Object.values(cart).reduce((a, b) => a + b, 0);
+        document.getElementById('cart-count-mobile').innerText = totalItens;
+        document.getElementById('cart-count-pc').innerText = totalItens;
+        
+        const cartBar = document.getElementById('cart-bar-mobile');
+        if (totalItens > 0) cartBar.classList.remove('translate-y-full');
+        else cartBar.classList.add('translate-y-full');
     }
 
     function renderizarSacola() {
@@ -780,9 +655,9 @@ function atualizarUI() {
         const nome = document.getElementById('client-name').value;
         const tel = document.getElementById('client-phone').value;
         const end = document.getElementById('client-address').value;
-
+        
         if (!nome || !tel) {
-            alert("Por favor, preencha seu nome e WhatsApp.");
+            alert("Por favor, preencha seu nome e telefone para contato.");
             return;
         }
 
@@ -793,9 +668,13 @@ function atualizarUI() {
         }
         msg += `\n*Total:* ${document.getElementById('modal-total-value').innerText}`;
         msg += `\n\n*Cliente:* ${nome}\n*Contato:* ${tel}\n*Endereço:* ${end}`;
-
+        
+        // Substitua '55SEUNUMERO' pelo número com DDD
         window.open(`https://wa.me/55SEUNUMERO?text=${encodeURIComponent(msg)}`, '_blank');
     }
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
