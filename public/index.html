@@ -506,6 +506,7 @@
     }
 
     // Tarjetas de la vitrina (Comentário corrigido com as duas barras)
+    // Renderiza os cards da vitrine de forma responsiva e elegante
     function renderizarVitrine() {
         const grid = document.getElementById('products-grid');
         if (!grid) return;
@@ -523,123 +524,200 @@
         }
 
         filtrados.forEach(p => {
+            const qtdNoCarrinho = cart[p.id_produto] || 0;
             grid.innerHTML += `
             <div class="group bg-white border border-neutral-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
                 <div class="relative aspect-square bg-neutral-50 overflow-hidden">
                     <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                 </div>
-                <div class="p-4 flex flex-col flex-1">
-                    <h4 class="text-sm font-medium text-neutral-900 mb-1">${p.nome}</h4>
-                    <span class="text-xs text-neutral-400 mb-3">${p.categoria}</span>
-                    <div class="mt-auto flex items-center justify-between">
-                        <span class="text-sm font-bold text-black">R$ ${p.preco.toFixed(2)}</span>
-                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="text-[10px] bg-black text-white px-3 py-1.5 rounded-lg hover:bg-neutral-800">Adicionar</button>
+                <div class="p-4 flex flex-col flex-1 justify-between">
+                    <div>
+                        <h4 class="text-sm font-medium text-neutral-900 mb-1 line-clamp-2">${p.nome}</h4>
+                        <p class="text-xs text-neutral-400 mb-3 font-mono">${p.id_produto}</p>
+                    </div>
+                    <div class="space-y-3">
+                        <p class="text-base font-bold text-neutral-900">R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
+                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="w-full bg-neutral-50 hover:bg-black text-neutral-800 hover:text-white border border-neutral-200 hover:border-black py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2">
+                            <span class="material-symbols-rounded text-sm">shopping_bag</span>
+                            ${qtdNoCarrinho > 0 ? `Adicionado (${qtdNoCarrinho}x)` : 'Adicionar à Sacola'}
+                        </button>
                     </div>
                 </div>
             </div>`;
         });
     }
 
-    function processImageFile(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('upload-placeholder-view').classList.add('hidden');
-                document.getElementById('upload-preview-container').classList.remove('hidden');
-                document.getElementById('upload-preview-container').classList.add('flex');
-                document.getElementById('upload-preview-img').src = e.target.result;
+    // Gerenciamento e sincronização do carrinho/sacola
+    function adicionarAoCarrinho(id) {
+        cart[id] = (cart[id] || 0) + 1;
+        atualizarUI();
+        renderizarVitrine();
+    }
+
+    function atualizarUI() {
+        let totalItens = 0;
+        let totalValor = 0;
+
+        for (const id in cart) {
+            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+            if (prod) {
+                totalItens += cart[id];
+                totalValor += (parseFloat(prod.preco) * cart[id]);
             }
-            reader.readAsDataURL(input.files[0]);
         }
-    }
 
-    function filterCategory(cat) {
-        currentCategory = cat;
-        document.querySelectorAll('.cat-btn').forEach(btn => {
-            btn.classList.remove('bg-black', 'text-white', 'font-semibold');
-            btn.classList.add('bg-neutral-50', 'text-neutral-600');
-        });
-        document.getElementById(`btn-cat-${cat}`).classList.add('bg-black', 'text-white', 'font-semibold');
-        renderizarVitrine();
-    }
+        // Interface Desktop
+        document.getElementById('cart-count-pc').innerText = totalItens;
+        
+        // Interface Mobile
+        document.getElementById('cart-count-mobile').innerText = totalItens;
+        document.getElementById('cart-total-mobile').innerText = `R$ ${totalValor.toFixed(2)}`;
 
-    function syncSearch(val) {
-        currentSearch = val;
-        renderizarVitrine();
+        const barMobile = document.getElementById('cart-bar-mobile');
+        if (totalItens > 0) {
+            barMobile.classList.remove('translate-y-full');
+        } else {
+            barMobile.classList.add('translate-y-full');
+        }
+
+        document.getElementById('modal-total-value').innerText = `R$ ${totalValor.toFixed(2)}`;
     }
 
     function toggleCheckoutModal() {
         const modal = document.getElementById('checkout-modal');
-        modal.classList.toggle('hidden');
-        if (!modal.classList.contains('hidden')) renderizarSacola();
-    }
-
-    function adicionarAoCarrinho(id) {
-        cart[id] = (cart[id] || 0) + 1;
-        atualizarUI();
-    }
-
-    function atualizarUI() {
-        const totalItens = Object.values(cart).reduce((a, b) => a + b, 0);
-        document.getElementById('cart-count-mobile').innerText = totalItens;
-        document.getElementById('cart-count-pc').innerText = totalItens;
-
-        const cartBar = document.getElementById('cart-bar-mobile');
-        if (totalItens > 0) cartBar.classList.remove('translate-y-full');
-        else cartBar.classList.add('translate-y-full');
+        if (modal.classList.contains('hidden')) {
+            renderizarSacola();
+            modal.classList.remove('hidden');
+        } else {
+            modal.classList.add('hidden');
+        }
     }
 
     function renderizarSacola() {
-        const list = document.getElementById('cart-items-list');
-        list.innerHTML = '';
-        let total = 0;
+        const lista = document.getElementById('cart-items-list');
+        if (!lista) return;
+        lista.innerHTML = '';
+
+        let temItens = false;
 
         for (const id in cart) {
             const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-            if (prod && cart[id] > 0) {
-                total += prod.preco * cart[id];
-                list.innerHTML += `
-                <div class="flex items-center gap-4 py-2">
-                    <img src="${prod.foto}" class="w-12 h-12 rounded-lg object-cover">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium">${prod.nome}</p>
-                        <p class="text-xs text-neutral-500">${cart[id]} x R$ ${prod.preco.toFixed(2)}</p>
+            if (prod) {
+                temItens = true;
+                lista.innerHTML += `
+                <div class="flex items-center gap-4 py-4 first:pt-0">
+                    <img src="${prod.foto}" class="w-16 h-16 object-cover rounded-xl border border-neutral-100 shadow-sm bg-neutral-50">
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-sm font-medium text-neutral-900 truncate">${prod.nome}</h4>
+                        <p class="text-xs text-neutral-400 font-semibold mt-0.5">R$ ${parseFloat(prod.preco).toFixed(2)}</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <button onclick="alterarQuantidade('${id}', -1)" class="w-6 h-6 rounded-full border border-neutral-200 flex items-center justify-center text-xs hover:bg-neutral-50">-</button>
+                            <span class="text-xs font-semibold w-4 text-center">${cart[id]}</span>
+                            <button onclick="alterarQuantidade('${id}', 1)" class="w-6 h-6 rounded-full border border-neutral-200 flex items-center justify-center text-xs hover:bg-neutral-50">+</button>
+                        </div>
                     </div>
-                    <button onclick="removerDoCarrinho('${id}')" class="text-neutral-400 hover:text-red-500">
+                    <button onclick="removerDoCarrinho('${id}')" class="text-neutral-400 hover:text-red-500 transition-colors">
                         <span class="material-symbols-rounded text-lg">delete</span>
                     </button>
                 </div>`;
             }
         }
-        document.getElementById('modal-total-value').innerText = `R$ ${total.toFixed(2)}`;
+
+        if (!temItens) {
+            lista.innerHTML = `<p class="text-center text-neutral-400 py-12 font-light text-sm">Sua sacola está vazia.</p>`;
+        }
+    }
+
+    function alterarQuantidade(id, delta) {
+        cart[id] = (cart[id] || 0) + delta;
+        if (cart[id] <= 0) {
+            delete cart[id];
+        }
+        atualizarUI();
+        renderizarSacola();
+        renderizarVitrine();
     }
 
     function removerDoCarrinho(id) {
         delete cart[id];
         atualizarUI();
         renderizarSacola();
+        renderizarVitrine();
     }
 
+    // Filtros por Categorias de Coleção
+    function filterCategory(cat) {
+        currentCategory = cat;
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            btn.classList.remove('bg-black', 'text-white', 'font-semibold');
+            btn.classList.add('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
+        });
+
+        const activeBtn = document.getElementById(`btn-cat-${cat}`);
+        if (activeBtn) {
+            activeBtn.classList.remove('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
+            activeBtn.classList.add('bg-black', 'text-white', 'font-semibold');
+        }
+        renderizarVitrine();
+    }
+
+    // Sincronização e controle das barras de pesquisa (PC e Mobile)
+    function syncSearch(val) {
+        currentSearch = val;
+        document.getElementById('search-input-pc').value = val;
+        document.getElementById('search-input-mobile').value = val;
+        renderizarVitrine();
+    }
+
+    // Processamento estético da pré-visualização de imagem selecionada no upload
+    function processImageFile(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('upload-placeholder-view').classList.add('hidden');
+                document.getElementById('upload-preview-container').classList.remove('hidden');
+                document.getElementById('upload-preview-img').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Consolida o pedido final da sacola e faz o despacho estruturado para o WhatsApp
     function enviarPedido() {
-        const nome = document.getElementById('client-name').value;
-        const tel = document.getElementById('client-phone').value;
-        const end = document.getElementById('client-address').value;
+        const nome = document.getElementById('client-name').value.trim();
+        const tel = document.getElementById('client-phone').value.trim();
+        const end = document.getElementById('client-address').value.trim();
 
         if (!nome || !tel) {
             alert("Por favor, preencha seu nome e telefone para contato.");
             return;
         }
 
-        let msg = `Olá! Gostaria de fazer um pedido na LariAcessórios:\n\n`;
+        let temItens = false;
+        let msg = `Olá! Gostaria de fazer um pedido na *LariAcessórios*:\n\n`;
+        
         for (const id in cart) {
             const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-            if (prod) msg += `- ${prod.nome} (${cart[id]}x)\n`;
+            if (prod) {
+                temItens = true;
+                msg += `🔹 *${prod.nome}* (${cart[id]}x) — R$ ${(parseFloat(prod.preco) * cart[id]).toFixed(2)}\n`;
+            }
         }
-        msg += `\n*Total:* ${document.getElementById('modal-total-value').innerText}`;
-        msg += `\n\n*Cliente:* ${nome}\n*Contato:* ${tel}\n*Endereço:* ${end}`;
 
-        window.open(`https://wa.me/5591982005830?text=${encodeURIComponent(msg)}`, '_blank');
+        if (!temItens) {
+            alert("Sua sacola está vazia.");
+            return;
+        }
+
+        msg += `\n💰 *Total:* ${document.getElementById('modal-total-value').innerText}`;
+        msg += `\n\n📌 *Dados do Cliente:*`;
+        msg += `\n👤 *Nome:* ${nome}`;
+        msg += `\n📞 *Contato:* ${tel}`;
+        if (end) msg += `\n🏠 *Endereço/Entrega:* ${end}`;
+
+        const numeroWhats = "5591999999999"; // TODO: Atualizar com o WhatsApp real da LariAcessórios
+        window.open(`https://api.whatsapp.com/send?phone=${numeroWhats}&text=${encodeURIComponent(msg)}`, '_blank');
     }
-    </script>
+   </script>
 </body>
 </html>
