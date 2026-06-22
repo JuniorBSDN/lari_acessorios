@@ -13,14 +13,12 @@ VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
 DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
 
-
 def obter_conexao():
     if not DATABASE_URL:
         raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     conn.autocommit = True
     return conn
-
 
 def inicializar_infraestrutura_banco():
     if DATABASE_URL:
@@ -43,31 +41,24 @@ def inicializar_infraestrutura_banco():
         except Exception as e:
             print(f"Erro ao inicializar o banco de dados: {str(e)}")
 
-
 # Garante que a tabela exista ao subir a aplicação
 inicializar_infraestrutura_banco()
 
-
-# -------------------------------------------------------------
 # ROTA: Autenticação Administrativa
-# -------------------------------------------------------------
 @app.route("/api/admin/login", methods=["POST"])
-def efetuar_login_administrativo():
+def efetuari_login_administrativo():
     dados = request.get_json() or {}
     senha_fornecida = dados.get("senha")
-    
+
     if not ADMIN_PASSWORD:
         return jsonify({"error": "A senha do administrador não está configurada no ambiente da Vercel."}), 500
-        
+
     if senha_fornecida == ADMIN_PASSWORD:
         return jsonify({"token": "Bearer sessao_valida_lari_premium"}), 200
     else:
         return jsonify({"error": "Senha inválida."}), 401
 
-
-# -------------------------------------------------------------
 # ROTA: Upload de Imagens para o Vercel Blob
-# -------------------------------------------------------------
 @app.route("/api/upload", methods=["POST"])
 def processar_upload_imagem():
     token_sessao = request.headers.get("Authorization")
@@ -76,7 +67,7 @@ def processar_upload_imagem():
 
     if 'foto' not in request.files:
         return jsonify({"error": "Nenhum arquivo de imagem foi enviado."}), 400
-        
+
     arquivo_foto = request.files['foto']
     if arquivo_foto.filename == '':
         return jsonify({"error": "Arquivo inválido ou sem nome."}), 400
@@ -87,31 +78,27 @@ def processar_upload_imagem():
     try:
         nome_limpo_arquivo = arquivo_foto.filename.replace(" ", "_")
         url_blob = f"https://blob.vercel-storage.com/{nome_limpo_arquivo}"
-        
+
         headers_blob = {
             "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
             "x-api-version": "2023-01-01"
         }
-        
+
         conteudo_arquivo = arquivo_foto.read()
         resposta_blob = requests.put(url_blob, data=conteudo_arquivo, headers=headers_blob)
-        
+
         if resposta_blob.status_code in [200, 201]:
             dados_retorno = resposta_blob.json()
             return jsonify({"url": dados_retorno.get("url")}), 200
-            
+
         return jsonify({"error": "Falha na comunicação com o provedor de storage Vercel Blob."}), 500
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# -------------------------------------------------------------
 # ROTAS: Operações do Catálogo de Produtos (GET / POST)
-# -------------------------------------------------------------
 @app.route("/api/produtos", methods=["GET", "POST"])
 def gerenciar_colecao_produtos():
-    # Salvar ou Atualizar Produto
     if request.method == "POST":
         token_sessao = request.headers.get("Authorization")
         if token_sessao != "Bearer sessao_valida_lari_premium":
@@ -147,7 +134,6 @@ def gerenciar_colecao_produtos():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    # Listar Produtos (Para a Vitrine do Cliente e Grade do Administrador)
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
@@ -163,10 +149,7 @@ def gerenciar_colecao_produtos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# -------------------------------------------------------------
 # ROTA: Exclusão de Produtos por ID
-# -------------------------------------------------------------
 @app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
     token_sessao = request.headers.get("Authorization")
@@ -185,8 +168,6 @@ def remover_produto_banco(id_prod):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# Fallback / Rota raiz para checar integridade do sistema
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def catch_all(path):
