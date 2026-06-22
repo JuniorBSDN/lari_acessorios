@@ -44,9 +44,13 @@ def inicializar_infraestrutura_banco():
 # Garante que a tabela exista ao subir a aplicação
 inicializar_infraestrutura_banco()
 
-# ROTA: Autenticação Administrativa
+
+# =====================================================================
+# ROTA: Autenticação Administrativa (Ajustada para Vercel)
+# =====================================================================
 @app.route("/api/admin/login", methods=["POST"])
-def efetuari_login_administrativo():
+@app.route("/admin/login", methods=["POST"]) # Caso a Vercel limpe o prefixo
+def efetuari_login_administrative():
     dados = request.get_json() or {}
     senha_fornecida = dados.get("senha")
 
@@ -58,8 +62,12 @@ def efetuari_login_administrativo():
     else:
         return jsonify({"error": "Senha inválida."}), 401
 
+
+# =====================================================================
 # ROTA: Upload de Imagens para o Vercel Blob
+# =====================================================================
 @app.route("/api/upload", methods=["POST"])
+@app.route("/upload", methods=["POST"])
 def processar_upload_imagem():
     token_sessao = request.headers.get("Authorization")
     if token_sessao != "Bearer sessao_valida_lari_premium":
@@ -96,8 +104,12 @@ def processar_upload_imagem():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# =====================================================================
 # ROTAS: Operações do Catálogo de Produtos (GET / POST)
+# =====================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
+@app.route("/produtos", methods=["GET", "POST"])
 def gerenciar_colecao_produtos():
     if request.method == "POST":
         token_sessao = request.headers.get("Authorization")
@@ -149,8 +161,12 @@ def gerenciar_colecao_produtos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# =====================================================================
 # ROTA: Exclusão de Produtos por ID
+# =====================================================================
 @app.route("/api/produtos/<path:id_prod>", methods=["DELETE"])
+@app.route("/produtos/<path:id_prod>", methods=["DELETE"])
 def remover_produto_banco(id_prod):
     token_sessao = request.headers.get("Authorization")
     if token_sessao != "Bearer sessao_valida_lari_premium":
@@ -167,6 +183,7 @@ def remover_produto_banco(id_prod):
         return jsonify({"status": "success", "message": "Produto deletado com sucesso."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
