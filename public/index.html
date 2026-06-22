@@ -297,7 +297,7 @@
     async function carregarProdutosDoServidor() {
     try {
         // Mudado de '/api/produtos' para o caminho direto 'api/api/index.py'
-        const resposta = await fetch('/api/api/index.py');
+        const resposta = await fetch('/api/produtos');
         if (resposta.ok) {
             datasetProducts = await resposta.json();
             renderizarVitrine();
@@ -341,11 +341,11 @@
    async function efetuarLoginAdmin(senha) {
     try {
         // Mudado para bater na API direta
-        const resposta = await fetch('/api/api/index.py/admin/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ senha: senha })
-        });
+       const resposta = await fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ senha: senha })
+});
         const resultado = await resposta.json();
 
         if (resposta.ok && resultado.token) {
