@@ -540,37 +540,6 @@
         });
     }
 
-
-    function atualizarIndicadoresSacola() {
-        let totalItens = 0;
-        let valorTotal = 0;
-
-        Object.keys(cart).forEach(id => {
-            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
-            if (p) {
-                totalItens += cart[id];
-                valorTotal += (p.preco || 0) * cart[id];
-            }
-        });
-
-        const countPc = document.getElementById('cart-count-pc');
-        const countMob = document.getElementById('cart-count-mobile');
-        const totalMob = document.getElementById('cart-total-mobile');
-        const barMob = document.getElementById('cart-bar-mobile');
-
-        if (countPc) countPc.innerText = totalItens;
-        if (countMob) countMob.innerText = totalItens;
-        if (totalMob) totalMob.innerText = `R$ ${valorTotal.toFixed(2)}`;
-
-        if (barMob) {
-            if (totalItens > 0) {
-                barMob.classList.remove('translate-y-full');
-            } else {
-                barMob.classList.add('translate-y-full');
-            }
-        }
-    }
-
 function processImageFile(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -672,7 +641,6 @@ function processImageFile(input) {
         // Substitua o número abaixo pelo seu (com DDD)
         window.open(`https://wa.me/5591982005830?text=${encodeURIComponent(msg)}`, '_blank');
     }
-
     </script>
 </body>
 </html>
