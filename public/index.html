@@ -626,7 +626,7 @@ function processImageFile(input) {
         let total = 0;
 
         for (const id in cart) {
-            const prod = datasetProducts.find(p => p.id_produto === id);
+            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
             if (prod && cart[id] > 0) {
                 total += prod.preco * cart[id];
                 list.innerHTML += `
@@ -663,18 +663,16 @@ function processImageFile(input) {
 
         let msg = `Olá! Gostaria de fazer um pedido na LariAcessórios:\n\n`;
         for (const id in cart) {
-            const prod = datasetProducts.find(p => p.id_produto === id);
-            msg += `- ${prod.nome} (${cart[id]}x)\n`;
+            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+            if (prod) msg += `- ${prod.nome} (${cart[id]}x)\n`;
         }
         msg += `\n*Total:* ${document.getElementById('modal-total-value').innerText}`;
         msg += `\n\n*Cliente:* ${nome}\n*Contato:* ${tel}\n*Endereço:* ${end}`;
         
-        // Substitua '55SEUNUMERO' pelo número com DDD
-        window.open(`https://wa.me/55SEUNUMERO?text=${encodeURIComponent(msg)}`, '_blank');
+        // Substitua o número abaixo pelo seu (com DDD)
+        window.open(`https://wa.me/5591982005830?text=${encodeURIComponent(msg)}`, '_blank');
     }
-    </script>
-</body>
-</html>
+
     </script>
 </body>
 </html>
