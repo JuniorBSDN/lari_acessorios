@@ -8,41 +8,45 @@ from psycopg2.extras import RealDictCursor
 app = Flask(__name__)
 CORS(app)
 
+# Mantemos apenas os tokens fixos no topo, mas faremos a checagem dinâmica deles também
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
-    "POSTGRES_URL_NON_POOLING")
 
 
 def obter_conexao():
-    if not DATABASE_URL:
-        raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    # CAPTURA DINÂMICA: LÊ DIRETO DO AMBIENTE TODA VEZ QUE CONECTA
+    db_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
+    
+    if not db_url:
+        raise ValueError("A string de conexão (DATABASE_URL/POSTGRES_URL) não foi encontrada no ambiente da Vercel.")
+    
+    conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
     conn.autocommit = True
     return conn
 
 
 def inicializar_infraestrutura_banco():
-    if DATABASE_URL:
-        try:
-            conn = obter_conexao()
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS produtos (
-                    id_produto VARCHAR(255) PRIMARY KEY,
-                    nome VARCHAR(255) NOT NULL,
-                    preco NUMERIC(10, 2) NOT NULL,
-                    categoria VARCHAR(100) NOT NULL,
-                    foto TEXT NOT NULL,
-                    visivel BOOLEAN DEFAULT TRUE
-                );
-            """)
-            cursor.close()
-            conn.close()
-        except Exception as e:
-            print(f"⚠️ Inicialização do banco: {str(e)}")
+    try:
+        conn = obter_conexao()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS produtos (
+                id_produto VARCHAR(255) PRIMARY KEY,
+                nome VARCHAR(255) NOT NULL,
+                preco NUMERIC(10, 2) NOT NULL,
+                categoria VARCHAR(100) NOT NULL,
+                foto TEXT NOT NULL,
+                visivel BOOLEAN DEFAULT TRUE
+            );
+        """)
+        cursor.close()
+        conn.close()
+        print("✅ Infraestrutura do banco validada/criada com sucesso.")
+    except Exception as e:
+        print(f"⚠️ Inicialização do banco: {str(e)}")
 
 
+# Tenta inicializar ao carregar o módulo
 try:
     inicializar_infraestrutura_banco()
 except Exception:
