@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LariAcessórios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,200,0,0" />
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #ffffff; }
+        .font-luxury { font-family: 'Bodoni Moda', serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .text-logo-dark { color: #2d2d2d; }
+        .text-gold { color: #c5a880; }
+        .bg-gold { background-color: #b39266; }
+        .bg-gold-hover:hover { background-color: #9e7f55; }
+
+        .gold-gradient-line {
+            background: linear-gradient(90deg, #967849 0%, #d9c49e 30%, #f3e7cb 50%, #d9c49e 70%, #967849 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gold-gradient-line::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -150%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg);
+            animation: shineLine 6s infinite ease-in-out;
+        }
+
+        .gold-heart-glow {
+            fill: url(#gold-metallic);
+            position: relative;
+        }
+
+        @keyframes shineLine {
+            0% { left: -150%; }
+            15% { left: 150%; }
+            100% { left: 150%; }
+        }
+
+        @keyframes heartGlow {
+            0%, 100% { filter: drop-shadow(0 0 0px rgba(243, 231, 203, 0)); }
+            50% { filter: drop-shadow(0 0 5px rgba(217, 196, 158, 0.8)); }
+        }
+        .animate-heart { animation: heartGlow 3s infinite ease-in-out; }
+    </style>
+</head>
+<body class="text-neutral-800 antialiased min-h-screen">
+
+    <svg class="absolute w-0 h-0" width="0" height="0">
+        <defs>
+            <linearGradient id="gold-metallic" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#967849" />
+                <stop offset="30%" stop-color="#d9c49e" />
+                <stop offset="50%" stop-color="#f3e7cb" />
+                <stop offset="70%" stop-color="#d9c49e" />
+                <stop offset="100%" stop-color="#967849" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <div id="view-client" class="block pb-24 md:pb-6">
+        <header class="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-40 w-full px-4 md:px-8 py-4">
+            <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex flex-col items-center select-none text-center md:text-left md:items-start">
+                    <div class="relative flex items-end">
+                        <span class="font-luxury text-4xl md:text-5xl font-semibold tracking-wide text-logo-dark leading-none">Lari</span>
+                        <div class="absolute -right-3 top-[-8px] md:top-[-11px] w-6 h-6 animate-heart">
+                            <svg viewBox="0 0 24 24" class="w-full h-full">
+                                <path class="gold-heart-glow" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="#967849" stroke-width="0.5"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="gold-gradient-line w-44 md:w-52 h-[2px] mt-1.5 mb-1"></div>
+                    <span class="text-neutral-700 font-light tracking-[0.22em] uppercase text-[13px] md:text-[15px] pl-1 leading-none">Acessórios</span>
+                </div>
+
+                <div class="hidden md:block w-80 lg:w-96 relative">
+                    <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xl">search</span>
+                    <input type="text" id="search-input-pc" oninput="syncSearch(this.value)" placeholder="Buscar relógios, cordões, bolsas..." class="w-full pl-11 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-black font-light text-sm">
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:flex items-center gap-1.5 text-neutral-500 text-xs font-light bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-full">
+                        <span class="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-pulse"></span>
+                        Catálogo Online
+                    </div>
+                    <button onclick="switchView('admin')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-500 hover:text-black border border-neutral-200 hover:border-black px-3 py-1.5 rounded-full transition-all duration-300">
+                        <span class="material-symbols-rounded text-sm text-gold">lock</span> Painel Lari
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-[1600px] mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <aside class="lg:col-span-1 space-y-6 lg:sticky lg:top-28">
+                <div class="relative md:hidden">
+                    <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xl">search</span>
+                    <input type="text" id="search-input-mobile" oninput="syncSearch(this.value)" placeholder="Buscar na LariAcessórios..." class="w-full pl-11 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-black text-sm">
+                </div>
+                <div>
+                    <h3 class="hidden lg:block text-xs tracking-widest text-neutral-400 uppercase font-bold mb-4">Coleções</h3>
+                    <div class="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <button id="btn-cat-todos" onclick="filterCategory('todos')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-black text-white font-semibold text-left w-full">Todos os Produtos</button>
+                        <button id="btn-cat-relogios" onclick="filterCategory('relogios')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">🕰️ Relógios</button>
+                        <button id="btn-cat-cordoes" onclick="filterCategory('cordoes')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">✨ Cordões</button>
+                        <button id="btn-cat-bolsas" onclick="filterCategory('bolsas')" class="cat-btn px-5 py-2.5 lg:py-3 rounded-lg text-xs tracking-wider uppercase transition-all duration-300 bg-neutral-50 border border-neutral-200 text-neutral-600 hover:text-black text-left w-full">👜 Bolsas Premium</button>
+                    </div>
+                </div>
+            </aside>
+            <main class="lg:col-span-3 space-y-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6" id="products-grid"></div>
+            </main>
+        </div>
+
+        <div id="cart-bar-mobile" class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-neutral-100 p-4 transform translate-y-full transition-transform duration-300 z-50">
+            <button onclick="toggleCheckoutModal()" class="w-full bg-black text-white font-bold py-4 px-5 rounded-xl flex items-center justify-between tracking-wider text-xs uppercase">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-xl text-gold">shopping_bag</span>
+                    <span id="cart-count-mobile" class="bg-white text-black px-2 py-0.5 rounded-md text-[10px] font-bold">0</span>
+                    <span>Ver Sacola</span>
+                </div>
+                <span id="cart-total-mobile" class="text-sm font-bold">R$ 0,00</span>
+            </button>
+        </div>
+
+        <button id="cart-btn-pc" onclick="toggleCheckoutModal()" class="hidden md:flex fixed bottom-8 right-8 bg-black text-white p-4 rounded-full shadow-2xl items-center gap-2 hover:scale-105 active:scale-95 transition-all z-40">
+            <span class="material-symbols-rounded text-gold">shopping_bag</span>
+            <span id="cart-count-pc" class="bg-white text-black text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+    </div>
+
+    <div id="view-admin" class="hidden min-h-screen bg-neutral-50">
+        <header class="bg-black text-white py-5 px-4 md:px-8 sticky top-0 z-40">
+            <div class="max-w-[1600px] mx-auto flex items-center justify-between">
+                <div>
+                    <h2 class="font-luxury text-xl md:text-2xl tracking-widest text-white uppercase">LariAcessórios <span class="text-xs font-sans text-gold font-light tracking-normal ml-2">Módulo Management</span></h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="switchView('client')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-400 hover:text-white border border-neutral-800 px-4 py-2 rounded-lg transition-colors">
+                        <span class="material-symbols-rounded text-sm">arrow_back</span> Voltar à Vitrine
+                    </button>
+                    <button onclick="logoutAdmin()" class="text-xs tracking-wider uppercase font-medium text-red-400 hover:text-red-500 transition-colors">
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-[1600px] mx-auto px-4 md:px-8 py-8 grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div class="xl:col-span-1 space-y-8">
+                <div class="bg-white border border-neutral-200/60 p-6 rounded-2xl shadow-sm space-y-6">
+                    <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                        <h3 class="text-xs tracking-widest text-neutral-400 uppercase font-bold">Desempenho da Marca</h3>
+                        <span class="material-symbols-rounded text-gold">verified_user</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Valor do Acervo</span>
+                            <span class="font-luxury text-xl font-bold text-black" id="dash-faturamento">R$ 0,00</span>
+                        </div>
+                        <div class="p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                            <span class="text-[10px] tracking-wider uppercase text-neutral-400 block mb-1">Itens Cadastrados</span>
+                            <span class="font-luxury text-xl font-bold text-black" id="dash-pedidos">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-neutral-200/60 p-6 rounded-2xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                        <h3 class="text-xs tracking-widest text-neutral-400 uppercase font-bold" id="form-title">Curar Novo Acessório</h3>
+                        <span class="text-gold material-symbols-rounded text-lg">auto_awesome</span>
+                    </div>
+                    <input type="hidden" id="prod-id">
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-neutral-400 uppercase font-semibold">Designação do Produto</label>
+                        <input type="text" id="prod-nome" placeholder="Ex: Bolsa Crossbody Black Diamond" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-black font-light">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-neutral-400 uppercase font-semibold">Preço de Venda (R$)</label>
+                            <input type="number" step="0.01" id="prod-preco" placeholder="0.00" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-black font-light">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-neutral-400 uppercase font-semibold">Coleção/Categoria</label>
+                            <select id="prod-categoria" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-black font-light">
+                                <option value="relogios">Relógios</option>
+                                <option value="cordoes">Cordões</option>
+                                <option value="bolsas">Bolsas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-neutral-400 uppercase font-semibold">Fotografia do Acessório</label>
+                        <div class="relative group w-full border-2 border-dashed border-neutral-200 hover:border-black rounded-xl p-4 transition-all bg-neutral-50 text-center cursor-pointer">
+                            <input type="file" id="prod-file" accept="image/*" onchange="processImageFile(this)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div class="space-y-1" id="upload-placeholder-view">
+                                <span class="material-symbols-rounded text-neutral-400 group-hover:text-gold text-2xl transition-colors">add_photo_alternate</span>
+                                <p class="text-[11px] font-medium text-neutral-700">Clique para selecionar ou solte a imagem aqui</p>
+                                <p class="text-[9px] text-neutral-400 uppercase tracking-wider">Formatos suportados: JPG, PNG, WEBP</p>
+                            </div>
+                            <div id="upload-preview-container" class="hidden flex-col items-center gap-1.5">
+                                <img id="upload-preview-img" src="" class="w-16 h-16 object-cover rounded-md border border-neutral-200 shadow-sm">
+                                <span class="text-[9px] text-neutral-400 uppercase bg-neutral-200/60 px-2 py-0.5 rounded-full font-bold">Imagem Selecionada</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex gap-2">
+                        <button onclick="salvarProdutoCompleto()" class="flex-1 bg-gold hover:bg-gold-hover text-white text-xs font-bold uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-md">Salvar Coleção</button>
+                        <button onclick="limparFormulario()" id="btn-cancelar" class="hidden bg-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-widest py-3.5 px-4 rounded-xl transition-all">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="xl:col-span-2 bg-white border border-neutral-200/60 p-6 rounded-2xl shadow-sm">
+                <h3 class="text-xs tracking-widest text-neutral-400 uppercase font-bold mb-6 border-b border-neutral-100 pb-3">Gerenciamento de Acervo Global</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-neutral-200 text-neutral-400 tracking-wider uppercase text-[10px]">
+                                <th class="pb-3 font-semibold">Item</th>
+                                <th class="pb-3 font-semibold">Coleção</th>
+                                <th class="pb-3 font-semibold">Preço</th>
+                                <th class="pb-3 font-semibold text-center">Exibir Vitrine</th>
+                                <th class="pb-3 font-semibold text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body" class="divide-y divide-neutral-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center md:justify-end">
+        <div class="bg-white border-t md:border-t-0 md:border-l border-neutral-200 w-full max-w-md h-[90vh] md:h-screen rounded-t-2xl md:rounded-t-none p-6 space-y-6 overflow-y-auto shadow-2xl flex flex-col justify-between">
+            <div class="flex flex-col h-full overflow-hidden">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-4 shrink-0">
+                    <h2 class="font-luxury text-xl tracking-wider text-black uppercase">Sua Sacola</h2>
+                    <button onclick="toggleCheckoutModal()" class="p-1 rounded-full bg-neutral-100 text-neutral-500 hover:text-black transition-colors">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div id="cart-items-list" class="space-y-4 divide-y divide-neutral-100 overflow-y-auto pr-1 mt-4 flex-1"></div>
+                <div class="space-y-3 pt-6 shrink-0 border-t border-neutral-100 mt-auto">
+                    <h4 class="text-[10px] tracking-widest text-neutral-400 uppercase font-bold">Informações de Envio</h4>
+                    <input type="text" id="client-name" placeholder="Seu nome completo" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light">
+                    <input type="text" id="client-phone" placeholder="WhatsApp para contato" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light">
+                    <textarea id="client-address" placeholder="Endereço de Entrega ou Retirada" rows="2" class="w-full p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black font-light"></textarea>
+                </div>
+            </div>
+            <div class="border-t border-neutral-100 pt-4 bg-white shrink-0">
+                <div class="flex justify-between items-center mb-4 text-sm font-semibold">
+                    <span>Total do Pedido:</span>
+                    <span id="modal-total-value" class="text-lg font-bold text-black">R$ 0,00</span>
+                </div>
+                <button onclick="enviarPedido()" class="w-full bg-black hover:bg-neutral-900 text-white font-bold py-4 rounded-xl tracking-widest text-xs uppercase transition-all shadow-lg">Enviar via WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 border border-neutral-100 shadow-xl">
+            <div class="text-center space-y-1">
+                <h3 class="font-luxury text-xl tracking-wider text-black uppercase">Acesso Restrito</h3>
+                <p class="text-xs text-neutral-400 font-light">Insira a credencial da marca LariAcessórios</p>
+            </div>
+            <div class="space-y-1">
+                <input type="password" id="admin-password-input" placeholder="Senha administrativa" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black text-center font-mono">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="fecharModalLogin()" class="w-1/3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 font-medium py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Voltar</button>
+                <button onclick="autenticarAdmin()" class="w-2/3 bg-black hover:bg-neutral-900 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Autenticar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let datasetProducts = [];
+    let cart = {};
+    let currentCategory = 'todos';
+    let currentSearch = '';
+
+    document.addEventListener("DOMContentLoaded", () => {
+        carregarProdutosDoServidor();
+    });
+
+    async function carregarProdutosDoServidor() {
+        try {
+            const resposta = await fetch('/api/produtos');
+            if (resposta.ok) {
+                datasetProducts = await resposta.json();
+                renderizarVitrine();
+            } else {
+                console.error("Erro ao puxar dados do catálogo.");
+            }
+        } catch (erro) {
+            console.error("Erro de rede ao conectar à API:", erro);
+        }
+    }
+
+    function switchView(view) {
+        if (view === 'admin') {
+            const token = localStorage.getItem('lari_admin_token');
+            if (token === 'Bearer sessao_valida_lari_premium') {
+                document.getElementById('view-client').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                carregarProdutosAdmin();
+            } else {
+                document.getElementById('login-modal').classList.remove('hidden');
+            }
+        } else {
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-client').classList.remove('hidden');
+            carregarProdutosDoServidor();
+        }
+    }
+
+    function fecharModalLogin() {
+        document.getElementById('login-modal').classList.add('hidden');
+        document.getElementById('admin-password-input').value = '';
+    }
+
+    function autenticarAdmin() {
+        const senhaDigitada = document.getElementById('admin-password-input').value;
+        if (!senhaDigitada) return;
+        fecharModalLogin();
+        efetuarLoginAdmin(senhaDigitada);
+    }
+
+    async function efetuarLoginAdmin(senha) {
+        try {
+            const resposta = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ senha: senha })
+            });
+            const resultado = await resposta.json();
+
+            if (resposta.ok && resultado.token) {
+                localStorage.setItem('lari_admin_token', resultado.token);
+                document.getElementById('view-client').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                carregarProdutosAdmin();
+            } else {
+                alert(resultado.error || "Senha inválida.");
+            }
+        } catch (erro) {
+            console.error("Falha ao autenticar:", erro);
+            alert("Erro na conexão com o servidor.");
+        }
+    }
+
+    function logoutAdmin() {
+        localStorage.removeItem('lari_admin_token');
+        switchView('client');
+    }
+
+    async function carregarProdutosAdmin() {
+        try {
+            const resposta = await fetch('/api/produtos');
+            if (resposta.ok) {
+                datasetProducts = await resposta.json();
+
+                const totalAcervo = datasetProducts.reduce((acc, p) => acc + parseFloat(p.preco || 0), 0);
+                document.getElementById('dash-faturamento').innerText = `R$ ${totalAcervo.toFixed(2)}`;
+                document.getElementById('dash-pedidos').innerText = datasetProducts.length;
+
+                const tbody = document.getElementById('admin-table-body');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+
+                datasetProducts.forEach(p => {
+                    tbody.innerHTML += `
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50/50">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg bg-neutral-100 shadow-sm">
+                                <div>
+                                    <p class="font-medium text-neutral-900">${p.nome}</p>
+                                    <p class="text-[10px] text-neutral-400 font-mono">${p.id_produto}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4 uppercase text-neutral-500 tracking-wider text-[10px]">${p.categoria}</td>
+                        <td class="p-4 font-semibold text-neutral-900">R$ ${parseFloat(p.preco || 0).toFixed(2)}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2 py-1 text-[10px] rounded-full font-medium ${p.visivel !== false ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-500'}">
+                                ${p.visivel !== false ? 'Sim' : 'Não'}
+                            </span>
+                        </td>
+                        <td class="p-4 text-right">
+                            <button onclick="removerProduto('${p.id_produto}')" class="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors">
+                                Excluir
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+            }
+        } catch (erro) {
+            console.error("Erro no carregamento corporativo:", erro);
+        }
+    }
+
+
+      async function salvarProdutoCompleto(event) {
+    if (event) event.preventDefault();
+
+    console.log("Iniciando salvamento...");
+
+    const fileInput = document.getElementById('prod-file');
+    const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
+    const nome = document.getElementById('prod-nome').value.trim();
+    const preco = document.getElementById('prod-preco').value.trim();
+    const categoria = document.getElementById('prod-categoria').value;
+
+    if (!fileInput || fileInput.files.length === 0) {
+        alert("A inclusão de uma foto do produto é obrigatória.");
+        return;
+    }
+
+    const token = localStorage.getItem('lari_admin_token');
+    try {
+        const formData = new FormData();
+        formData.append('foto', fileInput.files[0]);
+
+        const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Authorization': token },
+            body: formData
+        });
+
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+            alert("Falha no upload da imagem: " + uploadData.error);
+            return;
+        }
+
+        const payload = {
+            id_produto: id_produto,
+            nome: nome,
+            preco: parseFloat(preco),
+            categoria: categoria,
+            foto: uploadData.url,
+            visivel: true
+        };
+
+        const resposta = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (resposta.ok) {
+            alert("Acessório curado com sucesso!");
+            limparFormulario();
+            carregarProdutosAdmin();
+        } else {
+            const err = await resposta.json();
+            alert("Erro ao salvar: " + err.error);
+        }
+    } catch (erro) {
+        console.error("Erro na operação:", erro);
+    }
+}
+    async function removerProduto(idProd) {
+        if (!confirm("Remover permanentemente este item do acervo?")) return;
+        const token = localStorage.getItem('lari_admin_token');
+        try {
+            const resposta = await fetch(`/api/produtos/${idProd}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': token }
+            });
+            const resultado = await resposta.json();
+            if (resposta.ok) {
+                alert("Produto removido com sucesso!");
+                carregarProdutosAdmin();
+            } else {
+                alert(resultado.error || "Não foi possível excluir o produto.");
+            }
+        } catch (erro) {
+            console.error("Erro:", erro);
+        }
+    }
+
+    function limparFormulario() {
+        document.getElementById('prod-id').value = '';
+        document.getElementById('prod-nome').value = '';
+        document.getElementById('prod-preco').value = '';
+        const fileInput = document.getElementById('prod-file');
+        if (fileInput) fileInput.value = '';
+        document.getElementById('upload-placeholder-view').classList.remove('hidden');
+        document.getElementById('upload-preview-container').classList.add('hidden');
+        document.getElementById('upload-preview-img').src = '';
+    }
+
+    function renderizarVitrine() {
+        const grid = document.getElementById('products-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const filtrados = datasetProducts.filter(p => {
+            const bateCategoria = currentCategory === 'todos' || p.categoria === currentCategory;
+            const bateBusca = p.nome.toLowerCase().includes(currentSearch.toLowerCase()) || p.id_produto.toLowerCase().includes(currentSearch.toLowerCase());
+            return p.visivel !== false && bateCategoria && bateBusca;
+        });
+
+        if (filtrados.length === 0) {
+            grid.innerHTML = `<p class="col-span-full text-center text-neutral-400 py-12 font-light text-sm">Nenhum produto encontrado nesta coleção.</p>`;
+            return;
+        }
+
+        filtrados.forEach(p => {
+            grid.innerHTML += `
+            <div class="group bg-white border border-neutral-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
+                <div class="relative aspect-square bg-neutral-50 overflow-hidden">
+                    <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                </div>
+                <div class="p-4 flex flex-col flex-1">
+                    <h4 class="text-sm font-medium text-neutral-900 mb-1">${p.nome}</h4>
+                    <span class="text-xs text-neutral-400 mb-3">${p.categoria}</span>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-sm font-bold text-black">R$ ${p.preco.toFixed(2)}</span>
+                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="text-[10px] bg-black text-white px-3 py-1.5 rounded-lg hover:bg-neutral-800">Adicionar</button>
+                    </div>
+                </div>
+            </div>`;
+        });
+    }
+
+
+    function atualizarIndicadoresSacola() {
+        let totalItens = 0;
+        let valorTotal = 0;
+
+        Object.keys(cart).forEach(id => {
+            const p = datasetProducts.find(item => String(item.id_produto) === String(id));
+            if (p) {
+                totalItens += cart[id];
+                valorTotal += (p.preco || 0) * cart[id];
+            }
+        });
+
+        const countPc = document.getElementById('cart-count-pc');
+        const countMob = document.getElementById('cart-count-mobile');
+        const totalMob = document.getElementById('cart-total-mobile');
+        const barMob = document.getElementById('cart-bar-mobile');
+
+        if (countPc) countPc.innerText = totalItens;
+        if (countMob) countMob.innerText = totalItens;
+        if (totalMob) totalMob.innerText = `R$ ${valorTotal.toFixed(2)}`;
+
+        if (barMob) {
+            if (totalItens > 0) {
+                barMob.classList.remove('translate-y-full');
+            } else {
+                barMob.classList.add('translate-y-full');
+            }
+        }
+    }
+
+function processImageFile(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('upload-placeholder-view').classList.add('hidden');
+                document.getElementById('upload-preview-container').classList.remove('hidden');
+                document.getElementById('upload-preview-container').classList.add('flex');
+                document.getElementById('upload-preview-img').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function filterCategory(cat) {
+        currentCategory = cat;
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            btn.classList.remove('bg-black', 'text-white', 'font-semibold');
+            btn.classList.add('bg-neutral-50', 'text-neutral-600');
+        });
+        document.getElementById(`btn-cat-${cat}`).classList.add('bg-black', 'text-white', 'font-semibold');
+        renderizarVitrine();
+    }
+
+    function syncSearch(val) {
+        currentSearch = val;
+        renderizarVitrine();
+    }
+
+    function toggleCheckoutModal() {
+        const modal = document.getElementById('checkout-modal');
+        modal.classList.toggle('hidden');
+        if (!modal.classList.contains('hidden')) renderizarSacola();
+    }
+
+    function adicionarAoCarrinho(id) {
+        cart[id] = (cart[id] || 0) + 1;
+        atualizarUI();
+    }
+
+    function atualizarUI() {
+        const totalItens = Object.values(cart).reduce((a, b) => a + b, 0);
+        document.getElementById('cart-count-mobile').innerText = totalItens;
+        document.getElementById('cart-count-pc').innerText = totalItens;
+        
+        const cartBar = document.getElementById('cart-bar-mobile');
+        if (totalItens > 0) cartBar.classList.remove('translate-y-full');
+        else cartBar.classList.add('translate-y-full');
+    }
+
+    function renderizarSacola() {
+        const list = document.getElementById('cart-items-list');
+        list.innerHTML = '';
+        let total = 0;
+
+        for (const id in cart) {
+            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+            if (prod && cart[id] > 0) {
+                total += prod.preco * cart[id];
+                list.innerHTML += `
+                <div class="flex items-center gap-4 py-2">
+                    <img src="${prod.foto}" class="w-12 h-12 rounded-lg object-cover">
+                    <div class="flex-1">
+                        <p class="text-sm font-medium">${prod.nome}</p>
+                        <p class="text-xs text-neutral-500">${cart[id]} x R$ ${prod.preco.toFixed(2)}</p>
+                    </div>
+                    <button onclick="removerDoCarrinho('${id}')" class="text-neutral-400 hover:text-red-500">
+                        <span class="material-symbols-rounded text-lg">delete</span>
+                    </button>
+                </div>`;
+            }
+        }
+        document.getElementById('modal-total-value').innerText = `R$ ${total.toFixed(2)}`;
+    }
+
+    function removerDoCarrinho(id) {
+        delete cart[id];
+        atualizarUI();
+        renderizarSacola();
+    }
+
+    function enviarPedido() {
+        const nome = document.getElementById('client-name').value;
+        const tel = document.getElementById('client-phone').value;
+        const end = document.getElementById('client-address').value;
+        
+        if (!nome || !tel) {
+            alert("Por favor, preencha seu nome e telefone para contato.");
+            return;
+        }
+
+        let msg = `Olá! Gostaria de fazer um pedido na LariAcessórios:\n\n`;
+        for (const id in cart) {
+            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+            if (prod) msg += `- ${prod.nome} (${cart[id]}x)\n`;
+        }
+        msg += `\n*Total:* ${document.getElementById('modal-total-value').innerText}`;
+        msg += `\n\n*Cliente:* ${nome}\n*Contato:* ${tel}\n*Endereço:* ${end}`;
+        
+        // Substitua o número abaixo pelo seu (com DDD)
+        window.open(`https://wa.me/5591982005830?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    </script>
+</body>
+</html>
