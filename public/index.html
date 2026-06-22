@@ -341,9 +341,9 @@
         efetuarLoginAdmin(senhaDigitada);
     }
 
-   async function efetuarLoginAdmin(senha) {
+ async function efetuarLoginAdmin(senha) {
         try {
-            // Voltando para a rota relativa original idêntica à que funcionava antes
+            // Rota relativa original idêntica à que funcionava antes
             const resposta = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
