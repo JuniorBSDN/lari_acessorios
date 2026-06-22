@@ -411,82 +411,70 @@
         }
     }
 
-    async function salvarProdutoCompleto(event) {
-        async function salvarProdutoCompleto(event) {
+
+      async function salvarProdutoCompleto(event) {
     if (event) event.preventDefault();
     
-    // DEBUG: Veja se os dados estão sendo lidos
     console.log("Iniciando salvamento...");
 
     const fileInput = document.getElementById('prod-file');
+    const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
+    const nome = document.getElementById('prod-nome').value.trim();
+    const preco = document.getElementById('prod-preco').value.trim();
+    const categoria = document.getElementById('prod-categoria').value;
 
-        const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
-        const nome = document.getElementById('prod-nome').value.trim();
-        const preco = document.getElementById('prod-preco').value.trim();
-        const categoria = document.getElementById('prod-categoria').value;
-        const fileInput = document.getElementById('prod-file');
-
-        if (!fileInput || fileInput.files.length === 0) {
-        console.error("Nenhum arquivo de imagem encontrado!");
+    if (!fileInput || fileInput.files.length === 0) {
         alert("A inclusão de uma foto do produto é obrigatória.");
         return;
     }
 
-        const token = localStorage.getItem('lari_admin_token');
-        try {
-            let urlFoto = "";
-            if (fileInput && fileInput.files.length > 0) {
-                const formData = new FormData();
-                formData.append('foto', fileInput.files[0]);
+    const token = localStorage.getItem('lari_admin_token');
+    try {
+        const formData = new FormData();
+        formData.append('foto', fileInput.files[0]);
 
-                const uploadRes = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: { 'Authorization': token },
-                    body: formData
-                });
-                const uploadData = await uploadRes.json();
-                if (uploadRes.ok) {
-                    urlFoto = uploadData.url;
-                } else {
-                    alert("Falha no upload da imagem: " + uploadData.error);
-                    return;
-                }
-            } else {
-                alert("A inclusão de uma foto do produto é obrigatória.");
-                return;
-            }
-
-            const payload = {
-                id_produto: id_produto,
-                nome: nome,
-                preco: parseFloat(preco),
-                categoria: categoria,
-                foto: urlFoto,
-                visivel: true
-            };
-
-            const resposta = await fetch('/api/produtos', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': token
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (resposta.ok) {
-                alert("Acessório curado com sucesso!");
-                limparFormulario();
-                carregarProdutosAdmin();
-            } else {
-                const err = await resposta.json();
-                alert("Erro ao salvar: " + err.error);
-            }
-        } catch (erro) {
-            console.error("Erro na operação:", erro);
+        const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Authorization': token },
+            body: formData
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+            alert("Falha no upload da imagem: " + uploadData.error);
+            return;
         }
-    }
 
+        const payload = {
+            id_produto: id_produto,
+            nome: nome,
+            preco: parseFloat(preco),
+            categoria: categoria,
+            foto: uploadData.url,
+            visivel: true
+        };
+
+        const resposta = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (resposta.ok) {
+            alert("Acessório curado com sucesso!");
+            limparFormulario();
+            carregarProdutosAdmin();
+        } else {
+            const err = await resposta.json();
+            alert("Erro ao salvar: " + err.error);
+        }
+    } catch (erro) {
+        console.error("Erro na operação:", erro);
+    }
+}
     async function removerProduto(idProd) {
         if (!confirm("Remover permanentemente este item do acervo?")) return;
         const token = localStorage.getItem('lari_admin_token');
@@ -540,26 +528,21 @@
                 <div class="relative aspect-square bg-neutral-50 overflow-hidden">
                     <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                 </div>
-                <div class="p-4 flex flex-col flex-grow justify-between gap-2">
-                    <div>
-                        <span class="text-[9px] uppercase tracking-widest text-neutral-400 font-medium">${p.categoria}</span>
-                        <h4 class="font-medium text-sm text-neutral-900 group-hover:text-neutral-600 transition-colors mt-0.5 line-clamp-2">${p.nome}</h4>
-                    </div>
-                    <div class="flex items-center justify-between pt-1">
-                        <span class="font-bold text-base text-neutral-900">R$ ${parseFloat(p.preco || 0).toFixed(2)}</span>
-                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="p-2 rounded-lg bg-neutral-50 hover:bg-black text-neutral-600 hover:text-white transition-all duration-300 shadow-sm">
-                            <span class="material-symbols-rounded text-sm block">shopping_bag</span>
-                        </button>
+                <div class="p-4 flex flex-col flex-1">
+                    <h4 class="text-sm font-medium text-neutral-900 mb-1">${p.nome}</h4>
+                    <span class="text-xs text-neutral-400 mb-3">${p.categoria}</span>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-sm font-bold text-black">R$ ${p.preco.toFixed(2)}</span>
+                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="text-[10px] bg-black text-white px-3 py-1.5 rounded-lg hover:bg-neutral-800">Adicionar</button>
                     </div>
                 </div>
             </div>`;
         });
     }
 
+    // Adicione também a função de busca e a lógica do carrinho para completar a vitrine
     function syncSearch(val) {
         currentSearch = val;
-        document.getElementById('search-input-pc').value = val;
-        document.getElementById('search-input-mobile').value = val;
         renderizarVitrine();
     }
 
@@ -567,8 +550,29 @@
         currentCategory = cat;
         document.querySelectorAll('.cat-btn').forEach(btn => {
             btn.classList.remove('bg-black', 'text-white', 'font-semibold');
-            btn.classList.add('bg-neutral-50', 'border-neutral-200', 'text-neutral-600', 'hover:text-black');
+            btn.classList.add('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
         });
+        document.getElementById(`btn-cat-${cat}`).classList.add('bg-black', 'text-white', 'font-semibold');
+        renderizarVitrine();
+    }
+
+    function toggleCheckoutModal() {
+        const modal = document.getElementById('checkout-modal');
+        modal.classList.toggle('hidden');
+    }
+
+    function processImageFile(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('upload-preview-img').src = e.target.result;
+                document.getElementById('upload-placeholder-view').classList.add('hidden');
+                document.getElementById('upload-preview-container').classList.remove('hidden');
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+   
         const activeBtn = document.getElementById(`btn-cat-${cat}`);
         if (activeBtn) {
             activeBtn.classList.remove('bg-neutral-50', 'border-neutral-200', 'text-neutral-600', 'hover:text-black');
