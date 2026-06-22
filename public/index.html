@@ -414,7 +414,7 @@
 
       async function salvarProdutoCompleto(event) {
     if (event) event.preventDefault();
-    
+
     console.log("Iniciando salvamento...");
 
     const fileInput = document.getElementById('prod-file');
@@ -438,7 +438,7 @@
             headers: { 'Authorization': token },
             body: formData
         });
-        
+
         const uploadData = await uploadRes.json();
         if (!uploadRes.ok) {
             alert("Falha no upload da imagem: " + uploadData.error);
@@ -561,6 +561,19 @@
         modal.classList.toggle('hidden');
     }
 
+function atualizarUI() {
+    const totalItens = Object.values(cart).reduce((a, b) => a + b, 0);
+    document.getElementById('cart-count-mobile').innerText = totalItens;
+    document.getElementById('cart-count-pc').innerText = totalItens;
+
+    // Mostra a barra mobile se houver itens
+    const bar = document.getElementById('cart-bar-mobile');
+    if (totalItens > 0) {
+        bar.classList.remove('translate-y-full');
+    }
+}
+
+
     function processImageFile(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -572,7 +585,7 @@
             reader.readAsDataURL(input.files[0]);
         }
     }
-   
+
         const activeBtn = document.getElementById(`btn-cat-${cat}`);
         if (activeBtn) {
             activeBtn.classList.remove('bg-neutral-50', 'border-neutral-200', 'text-neutral-600', 'hover:text-black');
@@ -581,11 +594,10 @@
         renderizarVitrine();
     }
 
-    function adicionarAoCarrinho(idProd) {
-        if (!cart[idProd]) cart[idProd] = 0;
-        cart[idProd]++;
-        atualizarIndicadoresSacola();
-    }
+    function adicionarAoCarrinho(id) {
+    cart[id] = (cart[id] || 0) + 1;
+    atualizarUI();
+}
 
     function atualizarIndicadoresSacola() {
         let totalItens = 0;
@@ -618,15 +630,10 @@
     }
 
     function toggleCheckoutModal() {
-        const modal = document.getElementById('checkout-modal');
-        if (!modal) return;
-        if (modal.classList.contains('hidden')) {
-            modal.classList.remove('hidden');
-            renderizarSacolaModal();
-        } else {
-            modal.classList.add('hidden');
-        }
-    }
+    const modal = document.getElementById('checkout-modal');
+    modal.classList.toggle('hidden');
+    renderizarSacola();
+}
 
     function renderizarSacolaModal() {
         const container = document.getElementById('cart-items-list');
