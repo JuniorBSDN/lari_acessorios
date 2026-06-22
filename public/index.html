@@ -343,30 +343,15 @@
 
    async function efetuarLoginAdmin(senha) {
         try {
-            // Tenta obter dinamicamente a origem atual para evitar quebras de rota
-            const baseUrl = window.location.origin;
-            console.log("Tentando conectar em: " + baseUrl + '/api/admin/login');
-
-            const resposta = await fetch(`${baseUrl}/api/admin/login`, {
+            // Voltando para a rota relativa original idêntica à que funcionava antes
+            const resposta = await fetch('/api/admin/login', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ senha: senha })
             });
-            
-            // Se o servidor respondeu, mas não foi sucesso (ex: 404 ou 501)
-            if (!resposta.ok) {
-                const textoErro = await resposta.text();
-                console.error("Resposta de erro do servidor:", textErro);
-                alert(`Erro do servidor (${resposta.status}): Talvez a rota da API não tenha sido implantada corretamente na Vercel.`);
-                return;
-            }
-
             const resultado = await resposta.json();
 
-            if (resultado.token) {
+            if (resposta.ok && resultado.token) {
                 localStorage.setItem('lari_admin_token', resultado.token);
                 document.getElementById('view-client').classList.add('hidden');
                 document.getElementById('view-admin').classList.remove('hidden');
@@ -375,8 +360,8 @@
                 alert(resultado.error || "Senha inválida.");
             }
         } catch (erro) {
-            console.error("Falha técnica de rede/conexão:", erro);
-            alert("Erro de rede: O front-end não conseguiu alcançar a API Python. Verifique se o backend subiu sem erros no painel da Vercel (Logs).");
+            console.error("Falha ao autenticar:", erro);
+            alert("Erro na conexão com o servidor.");
         }
     }
 
