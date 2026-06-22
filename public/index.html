@@ -342,11 +342,11 @@
 
     async function efetuarLoginAdmin(senha) {
         try {
-            const resposta = await fetch('/api/admin/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ senha: senha })
-            });
+           const resposta = await fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ senha: senha })
+});
             const resultado = await resposta.json();
 
             if (resposta.ok && resultado.token) {
@@ -457,8 +457,8 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': token
-                },
-                body: JSON.stringify(payload)
+                    },
+                body: JSON.stringify(produto)
             });
 
             if (resposta.ok) {
