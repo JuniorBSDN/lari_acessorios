@@ -285,429 +285,403 @@
     </div>
 
    <script>
-    let datasetProducts = [];
-    let cart = {};
-    let currentCategory = 'todos';
-    let currentSearch = '';
+   // ===============================
+// LOGIN ADMIN
+// ===============================
 
-    document.addEventListener("DOMContentLoaded", () => {
-        carregarProdutosDoServidor();
-    });
+function fecharModalLogin() {
 
-    async function carregarProdutosDoServidor() {
-        try {
-            const resposta = await fetch('/api/produtos');
-            if (resposta.ok) {
-                datasetProducts = await resposta.json();
-                renderizarVitrine();
-            } else {
-                console.error("Erro ao puxar dados do catálogo.");
-            }
-        } catch (erro) {
-            console.error("Erro de rede ao conectar à API:", erro);
-        }
+    const modal =
+        document.getElementById(
+            'login-modal'
+        );
+
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+
+    document.getElementById(
+        'admin-password-input'
+    ).value = '';
+}
+
+function autenticarAdmin() {
+
+    const senha =
+        document.getElementById(
+            'admin-password-input'
+        ).value
+        .trim();
+
+    if (!senha) {
+
+        alert('Informe a senha.');
+
+        return;
     }
 
-    function switchView(view) {
-        if (view === 'admin') {
-            const token = localStorage.getItem('lari_admin_token');
-            if (token === 'Bearer sessao_valida_lari_premium') {
-                document.getElementById('view-client').classList.add('hidden');
-                document.getElementById('view-admin').classList.remove('hidden');
-                carregarProdutosAdmin();
-            } else {
-                document.getElementById('login-modal').classList.remove('hidden');
-                setTimeout(() => {
-                    document.getElementById('admin-password-input').focus();
-                }, 50);
-            }
-        } else {
-            document.getElementById('view-admin').classList.add('hidden');
-            document.getElementById('view-client').classList.remove('hidden');
-            carregarProdutosDoServidor();
-        }
-    }
+    efetuarLoginAdmin(senha);
+}
 
-    function fecharModalLogin() {
-        document.getElementById('login-modal').classList.add('hidden');
-        document.getElementById('admin-password-input').value = '';
-    }
+async function efetuarLoginAdmin(senha) {
 
-    function autenticarAdmin() {
-        const senhaDigitada = document.getElementById('admin-password-input').value;
-        if (!senhaDigitada) return;
-        fecharModalLogin();
-        efetuarLoginAdmin(senhaDigitada);
-    }
+    try {
 
-    async function efetuarLoginAdmin(senha) {
-        try {
-           const resposta = await fetch('/api/admin/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ senha: senha })
-});
-            const resultado = await resposta.json();
-
-            if (resposta.ok && resultado.token) {
-                localStorage.setItem('lari_admin_token', resultado.token);
-                document.getElementById('view-client').classList.add('hidden');
-                document.getElementById('view-admin').classList.remove('hidden');
-                carregarProdutosAdmin();
-            } else {
-                alert(resultado.error || "Senha inválida.");
-            }
-        } catch (erro) {
-            console.error("Falha ao autenticar:", erro);
-            alert("Erro na conexão com o servidor.");
-        }
-    }
-
-    function logoutAdmin() {
-        localStorage.removeItem('lari_admin_token');
-        switchView('client');
-    }
-
-    async function carregarProdutosAdmin() {
-        try {
-            const resposta = await fetch('/api/produtos');
-            if (resposta.ok) {
-                datasetProducts = await resposta.json();
-
-                const totalAcervo = datasetProducts.reduce((acc, p) => acc + parseFloat(p.preco || 0), 0);
-                document.getElementById('dash-faturamento').innerText = `R$ ${totalAcervo.toFixed(2)}`;
-                document.getElementById('dash-pedidos').innerText = datasetProducts.length;
-
-                const tbody = document.getElementById('admin-table-body');
-                if (!tbody) return;
-                tbody.innerHTML = '';
-
-                datasetProducts.forEach(p => {
-                    tbody.innerHTML += `
-                    <tr class="border-b border-neutral-100 hover:bg-neutral-50/50">
-                        <td class="p-4">
-                            <div class="flex items-center gap-3">
-                                <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg bg-neutral-100 shadow-sm">
-                                <div>
-                                    <p class="font-medium text-neutral-900">${p.nome}</p>
-                                    <p class="text-[10px] text-neutral-400 font-mono">${p.id_produto}</p>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="p-4 uppercase text-neutral-500 tracking-wider text-[10px]">${p.categoria}</td>
-                        <td class="p-4 font-semibold text-neutral-900">R$ ${parseFloat(p.preco || 0).toFixed(2)}</td>
-                        <td class="p-4 text-center">
-                            <span class="px-2 py-1 text-[10px] rounded-full font-medium ${p.visivel !== false ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-500'}">
-                                ${p.visivel !== false ? 'Sim' : 'Não'}
-                            </span>
-                        </td>
-                        <td class="p-4 text-right">
-                            <button onclick="removerProduto('${p.id_produto}')" class="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors">
-                                Excluir
-                            </button>
-                        </td>
-                    </tr>`;
-                });
-            }
-        } catch (erro) {
-            console.error("Erro no carregamento corporativo:", erro);
-        }
-    }
-
-    async function salvarProdutoCompleto() {
-        const fileInput = document.getElementById('prod-file');
-        const id_produto = document.getElementById('prod-id').value.trim() || 'LARI_' + Math.floor(1000 + Math.random() * 9000);
-        const nome = document.getElementById('prod-nome').value.trim();
-        const preco = document.getElementById('prod-preco').value.trim();
-        const categoria = document.getElementById('prod-categoria').value;
-
-        if (!fileInput || fileInput.files.length === 0) {
-            alert("A inclusão de uma foto do produto é obrigatória.");
-            return;
-        }
-
-        const token = localStorage.getItem('lari_admin_token');
-        try {
-            const formData = new FormData();
-            formData.append('foto', fileInput.files[0]);
-
-            const uploadRes = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Authorization': token },
-                body: formData
-            });
-
-            const uploadData = await uploadRes.json();
-            if (!uploadRes.ok) {
-                alert("Falha no upload da imagem: " + uploadData.error);
-                return;
-            }
-
-            const payload = {
-                id_produto: id_produto,
-                nome: nome,
-                preco: parseFloat(preco),
-                categoria: categoria,
-                foto: uploadData.url,
-                visivel: true
-            };
-
-            const resposta = await fetch('/api/produtos', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': token
+        const resposta =
+            await fetch(
+                `${API_BASE}/admin/login`,
+                {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':
+                        'application/json'
                     },
-                body: JSON.stringify(produto)
-            });
+                    body:JSON.stringify({
+                        senha
+                    })
+                }
+            );
 
-            if (resposta.ok) {
-                alert("Acessório curado com sucesso!");
-                limparFormulario();
-                carregarProdutosAdmin();
-            } else {
-                const err = await resposta.json();
-                alert("Erro ao salvar: " + err.error);
-            }
-        } catch (erro) {
-            console.error("Erro na operação:", erro);
-        }
-    }
+        const dados =
+            await resposta.json();
 
-    async function removerProduto(idProd) {
-        if (!confirm("Remover permanentemente este item do acervo?")) return;
-        const token = localStorage.getItem('lari_admin_token');
-        try {
-            const resposta = await fetch(`/api/produtos/${idProd}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': token }
-            });
-            const resultado = await resposta.json();
-            if (resposta.ok) {
-                alert("Produto removido com sucesso!");
-                carregarProdutosAdmin();
-            } else {
-                alert(resultado.error || "Não foi possível excluir o produto.");
-            }
-        } catch (erro) {
-            console.error("Erro:", erro);
-        }
-    }
+        if (!resposta.ok) {
 
-    function limparFormulario() {
-        document.getElementById('prod-id').value = '';
-        document.getElementById('prod-nome').value = '';
-        document.getElementById('prod-preco').value = '';
-        const fileInput = document.getElementById('prod-file');
-        if (fileInput) fileInput.value = '';
-        document.getElementById('upload-placeholder-view').classList.remove('hidden');
-        document.getElementById('upload-preview-container').classList.add('hidden');
-        document.getElementById('upload-preview-img').src = '';
-    }
+            alert(
+                dados.error ||
+                'Senha inválida.'
+            );
 
-    function renderizarVitrine() {
-        const grid = document.getElementById('products-grid');
-        if (!grid) return;
-        grid.innerHTML = '';
-
-        const filtrados = datasetProducts.filter(p => {
-            const bateCategoria = currentCategory === 'todos' || p.categoria === currentCategory;
-            const bateBusca = p.nome.toLowerCase().includes(currentSearch.toLowerCase()) || p.id_produto.toLowerCase().includes(currentSearch.toLowerCase());
-            return p.visivel !== false && bateCategoria && bateBusca;
-        });
-
-        if (filtrados.length === 0) {
-            grid.innerHTML = `<p class="col-span-full text-center text-neutral-400 py-12 font-light text-sm">Nenhum produto encontrado nesta coleção.</p>`;
             return;
         }
 
-        filtrados.forEach(p => {
-            const qtdNoCarrinho = cart[p.id_produto] || 0;
-            grid.innerHTML += `
-            <div class="group bg-white border border-neutral-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
-                <div class="relative aspect-square bg-neutral-50 overflow-hidden">
-                    <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                </div>
-                <div class="p-4 flex flex-col flex-1 justify-between">
+        localStorage.setItem(
+            'lari_admin_token',
+            dados.token
+        );
+
+        fecharModalLogin();
+
+        switchView('admin');
+
+    } catch (erro) {
+
+        console.error(erro);
+
+        alert(
+            'Erro ao autenticar.'
+        );
+    }
+}
+
+function logoutAdmin() {
+
+    localStorage.removeItem(
+        'lari_admin_token'
+    );
+
+    switchView('client');
+}
+
+function switchView(view) {
+
+    const client =
+        document.getElementById(
+            'view-client'
+        );
+
+    const admin =
+        document.getElementById(
+            'view-admin'
+        );
+
+    if (
+        view === 'admin'
+    ) {
+
+        const token =
+            localStorage.getItem(
+                'lari_admin_token'
+            );
+
+        if (!token) {
+
+            document
+                .getElementById(
+                    'login-modal'
+                )
+                .classList
+                .remove('hidden');
+
+            return;
+        }
+
+        client.classList.add(
+            'hidden'
+        );
+
+        admin.classList.remove(
+            'hidden'
+        );
+
+        carregarProdutosAdmin();
+
+    } else {
+
+        admin.classList.add(
+            'hidden'
+        );
+
+        client.classList.remove(
+            'hidden'
+        );
+    }
+}
+
+// ===============================
+// DASHBOARD
+// ===============================
+
+async function carregarProdutosAdmin() {
+
+    try {
+
+        const resposta =
+            await fetch(
+                `${API_BASE}/produtos`
+            );
+
+        datasetProducts =
+            await resposta.json();
+
+        atualizarDashboard();
+
+        renderizarTabelaAdmin();
+
+    } catch (erro) {
+
+        console.error(erro);
+    }
+}
+
+function atualizarDashboard() {
+
+    const valorAcervo =
+        datasetProducts.reduce(
+            (acc,p)=>
+                acc +
+                Number(
+                    p.preco || 0
+                ),
+            0
+        );
+
+    document.getElementById(
+        'dash-faturamento'
+    ).innerText =
+        valorAcervo.toLocaleString(
+            'pt-BR',
+            {
+                style:'currency',
+                currency:'BRL'
+            }
+        );
+
+    document.getElementById(
+        'dash-pedidos'
+    ).innerText =
+        datasetProducts.length;
+}
+
+// ===============================
+// TABELA ADMIN
+// ===============================
+
+function renderizarTabelaAdmin() {
+
+    const tbody =
+        document.getElementById(
+            'admin-table-body'
+        );
+
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    datasetProducts.forEach(produto => {
+
+        tbody.innerHTML += `
+        <tr>
+
+            <td class="p-4">
+
+                <div class="flex items-center gap-3">
+
+                    <img
+                        src="${produto.foto}"
+                        class="w-12 h-12 rounded-lg object-cover"
+                    >
+
                     <div>
-                        <h4 class="text-sm font-medium text-neutral-900 mb-1 line-clamp-2">${p.nome}</h4>
-                        <p class="text-xs text-neutral-400 mb-3 font-mono">${p.id_produto}</p>
-                    </div>
-                    <div class="space-y-3">
-                        <p class="text-base font-bold text-neutral-900">R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
-                        <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="w-full bg-neutral-50 hover:bg-black text-neutral-800 hover:text-white border border-neutral-200 hover:border-black py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2">
-                            <span class="material-symbols-rounded text-sm">shopping_bag</span>
-                            ${qtdNoCarrinho > 0 ? `Adicionado (${qtdNoCarrinho}x)` : 'Adicionar à Sacola'}
-                        </button>
-                    </div>
-                </div>
-            </div>`;
-        });
-    }
 
-    function adicionarAoCarrinho(id) {
-        cart[id] = (cart[id] || 0) + 1;
-        atualizarUI();
-        renderizarVitrine();
-    }
-
-    function atualizarUI() {
-        let totalItens = 0;
-        let totalValor = 0;
-
-        for (const id in cart) {
-            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-            if (prod) {
-                totalItens += cart[id];
-                totalValor += (parseFloat(prod.preco) * cart[id]);
-            }
-        }
-
-        document.getElementById('cart-count-pc').innerText = totalItens;
-        document.getElementById('cart-count-mobile').innerText = totalItens;
-        document.getElementById('cart-total-mobile').innerText = `R$ ${totalValor.toFixed(2)}`;
-
-        const barMobile = document.getElementById('cart-bar-mobile');
-        if (totalItens > 0) {
-            barMobile.classList.remove('translate-y-full');
-        } else {
-            barMobile.classList.add('translate-y-full');
-        }
-
-        document.getElementById('modal-total-value').innerText = `R$ ${totalValor.toFixed(2)}`;
-    }
-
-    function toggleCheckoutModal() {
-        const modal = document.getElementById('checkout-modal');
-        if (modal.classList.contains('hidden')) {
-            renderizarSacola();
-            modal.classList.remove('hidden');
-        } else {
-            modal.classList.add('hidden');
-        }
-    }
-
-    function renderizarSacola() {
-        const lista = document.getElementById('cart-items-list');
-        if (!lista) return;
-        lista.innerHTML = '';
-
-        let temItens = false;
-
-        for (const id in cart) {
-            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-            if (prod) {
-                temItens = true;
-                lista.innerHTML += `
-                <div class="flex items-center gap-4 py-4 first:pt-0">
-                    <img src="${prod.foto}" class="w-16 h-16 object-cover rounded-xl border border-neutral-100 shadow-sm bg-neutral-50">
-                    <div class="flex-1 min-w-0">
-                        <h4 class="text-sm font-medium text-neutral-900 truncate">${prod.nome}</h4>
-                        <p class="text-xs text-neutral-400 font-semibold mt-0.5">R$ ${parseFloat(prod.preco).toFixed(2)}</p>
-                        <div class="flex items-center gap-2 mt-2">
-                            <button onclick="alterarQuantidade('${id}', -1)" class="w-6 h-6 rounded-full border border-neutral-200 flex items-center justify-center text-xs hover:bg-neutral-50">-</button>
-                            <span class="text-xs font-semibold w-4 text-center">${cart[id]}</span>
-                            <button onclick="alterarQuantidade('${id}', 1)" class="w-6 h-6 rounded-full border border-neutral-200 flex items-center justify-center text-xs hover:bg-neutral-50">+</button>
+                        <div class="font-medium">
+                            ${produto.nome}
                         </div>
+
+                        <div class="text-xs text-neutral-400">
+                            ${produto.id_produto}
+                        </div>
+
                     </div>
-                    <button onclick="removerDoCarrinho('${id}')" class="text-neutral-400 hover:text-red-500 transition-colors">
-                        <span class="material-symbols-rounded text-lg">delete</span>
-                    </button>
-                </div>`;
-            }
-        }
 
-        if (!temItens) {
-            lista.innerHTML = `<p class="text-center text-neutral-400 py-12 font-light text-sm">Sua sacola está vazia.</p>`;
-        }
-    }
+                </div>
 
-    function alterarQuantidade(id, delta) {
-        cart[id] = (cart[id] || 0) + delta;
-        if (cart[id] <= 0) {
-            delete cart[id];
-        }
-        atualizarUI();
-        renderizarSacola();
-        renderizarVitrine();
-    }
+            </td>
 
-    function removerDoCarrinho(id) {
-        delete cart[id];
-        atualizarUI();
-        renderizarSacola();
-        renderizarVitrine();
-    }
+            <td class="p-4">
+                ${produto.categoria}
+            </td>
 
-    function filterCategory(cat) {
-        currentCategory = cat;
-        document.querySelectorAll('.cat-btn').forEach(btn => {
-            btn.classList.remove('bg-black', 'text-white', 'font-semibold');
-            btn.classList.add('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
-        });
+            <td class="p-4">
 
-        const activeBtn = document.getElementById(`btn-cat-${cat}`);
-        if (activeBtn) {
-            activeBtn.classList.remove('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
-            activeBtn.classList.add('bg-black', 'text-white', 'font-semibold');
-        }
-        renderizarVitrine();
-    }
+                ${Number(produto.preco)
+                    .toLocaleString(
+                        'pt-BR',
+                        {
+                            style:'currency',
+                            currency:'BRL'
+                        }
+                    )}
 
-    function syncSearch(val) {
-        currentSearch = val;
-        document.getElementById('search-input-pc').value = val;
-        document.getElementById('search-input-mobile').value = val;
-        renderizarVitrine();
-    }
+            </td>
 
-    function processImageFile(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('upload-placeholder-view').classList.add('hidden');
-                document.getElementById('upload-preview-container').classList.remove('hidden');
-                document.getElementById('upload-preview-img').src = e.target.result;
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
+            <td class="p-4 text-center">
 
-    function enviarPedido() {
-        const nome = document.getElementById('client-name').value.trim();
-        const tel = document.getElementById('client-phone').value.trim();
-        const end = document.getElementById('client-address').value.trim();
+                ${
+                    produto.visivel !== false
+                    ? '✅'
+                    : '❌'
+                }
 
-        if (!nome || !tel) {
-            alert("Por favor, preencha seu nome e telefone para contato.");
-            return;
-        }
+            </td>
 
-        let temItens = false;
-        let msg = `Olá! Gostaria de fazer um pedido na *LariAcessórios*:\n\n`;
+            <td class="p-4 text-right">
 
-        for (const id in cart) {
-            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-            if (prod) {
-                temItens = true;
-                msg += `🔹 *${prod.nome}* (${cart[id]}x) — R$ ${(parseFloat(prod.preco) * cart[id]).toFixed(2)}\n`;
-            }
-        }
+                <button
+                    onclick="editarProduto('${produto.id_produto}')"
+                    class="text-blue-500 mr-3"
+                >
+                    Editar
+                </button>
 
-        if (!temItens) {
-            alert("Sua sacola está vazia.");
-            return;
-        }
+                <button
+                    onclick="removerProduto('${produto.id_produto}')"
+                    class="text-red-500"
+                >
+                    Excluir
+                </button>
 
-        msg += `\n💰 *Total:* ${document.getElementById('modal-total-value').innerText}`;
-        msg += `\n\n📌 *Dados do Cliente:*`;
-        msg += `\n👤 *Nome:* ${nome}`;
-        msg += `\n📞 *Contato:* ${tel}`;
-        if (end) msg += `\n🏠 *Endereço/Entrega:* ${end}`;
+            </td>
 
-        const numeroWhats = "5591999999999"; // TODO: Atualizar com o WhatsApp real da LariAcessórios
-        window.open(`https://api.whatsapp.com/send?phone=${numeroWhats}&text=${encodeURIComponent(msg)}`, '_blank');
-    }
+        </tr>
+        `;
+    });
+}
+
+// ===============================
+// EDITAR PRODUTO
+// ===============================
+
+function editarProduto(id) {
+
+    const produto =
+        datasetProducts.find(
+            p =>
+            String(
+                p.id_produto
+            ) === String(id)
+        );
+
+    if (!produto) return;
+
+    editingProduct = produto;
+
+    document.getElementById(
+        'prod-id'
+    ).value =
+        produto.id_produto;
+
+    document.getElementById(
+        'prod-nome'
+    ).value =
+        produto.nome;
+
+    document.getElementById(
+        'prod-preco'
+    ).value =
+        produto.preco;
+
+    document.getElementById(
+        'prod-categoria'
+    ).value =
+        produto.categoria;
+
+    document.getElementById(
+        'form-title'
+    ).innerText =
+        'Editar Produto';
+
+    document.getElementById(
+        'btn-cancelar'
+    ).classList.remove(
+        'hidden'
+    );
+
+    window.scrollTo({
+        top:0,
+        behavior:'smooth'
+    });
+}
+
+// ===============================
+// CANCELAR EDIÇÃO
+// ===============================
+
+function limparFormulario() {
+
+    editingProduct = null;
+
+    document.getElementById(
+        'prod-id'
+    ).value = '';
+
+    document.getElementById(
+        'prod-nome'
+    ).value = '';
+
+    document.getElementById(
+        'prod-preco'
+    ).value = '';
+
+    document.getElementById(
+        'prod-categoria'
+    ).selectedIndex = 0;
+
+    document.getElementById(
+        'prod-file'
+    ).value = '';
+
+    document.getElementById(
+        'form-title'
+    ).innerText =
+        'Curar Novo Acessório';
+
+    document.getElementById(
+        'btn-cancelar'
+    ).classList.add(
+        'hidden'
+    );
+}
    </script>
 </body>
 </html>
