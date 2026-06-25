@@ -9,6 +9,6 @@
     { "src": "/api/upload", "dest": "api/index.py" },
     { "src": "/api/produtos", "dest": "api/index.py" },
     { "src": "/api/produtos/(.*)", "dest": "api/index.py" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+    { "src": "/(.*)", "dest": "public/$1" }
   ]
 }
