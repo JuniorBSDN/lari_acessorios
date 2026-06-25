@@ -539,7 +539,7 @@ async function salvarProdutoCompleto() {
     const nome = document.getElementById('prod-nome').value.trim();
     const preco = document.getElementById('prod-preco').value.trim();
     const categoria = document.getElementById('prod-categoria').value;
-    
+
     let token = localStorage.getItem('token_lari_admin');
     if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
 
@@ -552,8 +552,8 @@ async function salvarProdutoCompleto() {
 
     if (selectedImageFile) {
         const formData = new FormData();
-        formData.append('foto', selectedImageFile); 
-        
+        formData.append('foto', selectedImageFile);
+
         try {
             const uploadRes = await fetch(`${API_BASE}/upload`, {
                 method: 'POST',
@@ -658,14 +658,13 @@ async function toggleVisibilidadeProduto(id, statusAtual) {
 
         const dados = await res.json();
         if (!res.ok) throw new Error(dados.error || "Erro ao mudar visibilidade.");
-        
+
         carregarProdutosAdmin();
         carregarProdutosVitrine();
     } catch (err) {
         alert(err.message);
     }
 }
-
         function editarProduto(id) {
             const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
             if (!prod) return;
