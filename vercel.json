@@ -5,7 +5,10 @@
     { "src": "public/**/*", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/.*", "dest": "api/index.py" },
+    { "src": "/api/admin/login", "dest": "api/index.py" },
+    { "src": "/api/upload", "dest": "api/index.py" },
+    { "src": "/api/produtos", "dest": "api/index.py" },
+    { "src": "/api/produtos/(.*)", "dest": "api/index.py" },
     { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
