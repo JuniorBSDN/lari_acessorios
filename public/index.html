@@ -467,7 +467,7 @@
         function processImageFile(input) {
             if (input.files && input.files[0]) {
                 selectedImageFile = input.files[0];
-                
+
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     document.getElementById('upload-preview-img').src = e.target.result;
@@ -485,10 +485,10 @@
             try {
                 const resposta = await fetch(`${API_BASE}/produtos`);
                 datasetProducts = await resposta.json();
-                
+
                 let totalAcervo = 0;
                 datasetProducts.forEach(p => totalAcervo += parseFloat(p.preco));
-                
+
                 document.getElementById('dash-faturamento').innerText = totalAcervo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 document.getElementById('dash-pedidos').innerText = datasetProducts.length;
 
@@ -534,18 +534,18 @@
         }
 
         async function salvarProdutoCompleto() {
-            const id = document.getElementById('prod-id').value;
-            const nome = document.getElementById('prod-nome').value.trim();
-            const preco = document.getElementById('prod-preco').value.trim();
-            const categoria = document.getElementById('prod-categoria').value;
-            let token = localStorage.getItem('token_lari_admin');
+    const id = document.getElementById('prod-id').value;
+    const nome = document.getElementById('prod-nome').value.trim();
+    const preco = document.getElementById('prod-preco').value.trim();
+    const categoria = document.getElementById('prod-categoria').value;
+    let token = localStorage.getItem('token_lari_admin');
 
-            if (!nome || !preco) {
-                alert("Por favor, preencha todos os campos fundamentais.");
-                return;
-            }
+    if (!nome || !preco) {
+        alert("Por favor, preencha todos os campos fundamentais.");
+        return;
+    }
 
-            if (token && !token.startsWith('Bearer ')) {
+    if (token && !token.startsWith('Bearer ')) {
                 token = `Bearer ${token}`;
             }
 
@@ -573,13 +573,13 @@
                 return;
             }
 
-            const payload = { 
-                nome: nome, 
-                preco: parseFloat(preco), 
-                categoria: categoria, 
-                foto: urlFotoFinal 
+            const payload = {
+                nome: nome,
+                preco: parseFloat(preco),
+                categoria: categoria,
+                foto: urlFotoFinal
             };
-            
+
             const endpoint = id ? `${API_BASE}/produtos/${id}` : `${API_BASE}/produtos`;
             const metodo = id ? 'PUT' : 'POST';
 
@@ -638,7 +638,7 @@
                 });
 
                 if (!res.ok) throw new Error("Erro na exclusão.");
-                
+
                 alert("Item removido do acervo.");
                 carregarProdutosAdmin();
                 carregarProdutosVitrine();
@@ -654,9 +654,9 @@
             try {
                 const res = await fetch(`${API_BASE}/produtos/${id}`, {
                     method: 'PUT',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': token 
+                        'Authorization': token
                     },
                     body: JSON.stringify({ visivel: !statusAtual })
                 });
