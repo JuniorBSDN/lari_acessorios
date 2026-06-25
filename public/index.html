@@ -533,80 +533,92 @@
             });
         }
 
-        async function salvarProdutoCompleto() {
+async function salvarProdutoCompleto() {
     const id = document.getElementById('prod-id').value;
     const nome = document.getElementById('prod-nome').value.trim();
     const preco = document.getElementById('prod-preco').value.trim();
     const categoria = document.getElementById('prod-categoria').value;
+
     let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) {
+        token = `Bearer ${token}`;
+    }
 
     if (!nome || !preco) {
         alert("Por favor, preencha todos os campos fundamentais.");
         return;
     }
 
-    if (token && !token.startsWith('Bearer ')) {
-                token = `Bearer ${token}`;
+    let urlFotoFinal = editingProduct ? editingProduct.foto : '';
+
+    // Se houver uma nova imagem selecionada, faz o upload primeiro
+    if (selectedImageFile) {
+        const formData = new FormData();
+        // Alterado de 'file' para 'foto' para alinhar com o request.files['foto'] do Python
+        formData.append('foto', selectedImageFile);
+
+        try {
+            const uploadRes = await fetch(`${API_BASE}/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': token },
+                body: formData
+            });
+
+            const uploadDados = await uploadRes.json();
+
+            if (!uploadRes.ok) {
+                throw new Error(uploadDados.error || "Falha ao processar arquivo.");
             }
 
-            let urlFotoFinal = editingProduct ? editingProduct.foto : '';
-
-            if (selectedImageFile) {
-                const formData = new FormData();
-                formData.append('file', selectedImageFile);
-                try {
-                    const uploadRes = await fetch(`${API_BASE}/upload`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const uploadDados = await uploadRes.json();
-                    if (!uploadRes.ok) throw new Error(uploadDados.error || "Falha ao processar arquivo.");
-                    urlFotoFinal = uploadDados.url;
-                } catch (err) {
-                    alert("Erro no upload da imagem: " + err.message);
-                    return;
-                }
-            }
-
-            if (!urlFotoFinal) {
-                alert("É necessário definir uma imagem para o acessório.");
-                return;
-            }
-
-            const payload = {
-                nome: nome,
-                preco: parseFloat(preco),
-                categoria: categoria,
-                foto: urlFotoFinal
-            };
-
-            const endpoint = id ? `${API_BASE}/produtos/${id}` : `${API_BASE}/produtos`;
-            const metodo = id ? 'PUT' : 'POST';
-
-            try {
-                const res = await fetch(endpoint, {
-                    method: metodo,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': token
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const respostaDados = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(respostaDados.error || "Erro ao salvar no banco de dados.");
-                }
-
-                alert("Acervo atualizado com sucesso!");
-                limparFormulario();
-                carregarProdutosAdmin();
-                carregarProdutosVitrine();
-            } catch (erro) {
-                alert("Falha no fluxo: " + erro.message);
-            }
+            urlFotoFinal = uploadDados.url;
+        } catch (err) {
+            alert("Erro no upload da imagem: " + err.message);
+            return;
         }
+    }
+
+    if (!urlFotoFinal) {
+        alert("É necessário definir uma imagem para o acessório.");
+        return;
+    }
+
+    const payload = {
+        id_produto: id || crypto.randomUUID(), // Garante o id_produto exigido pelo seu Python
+        nome: nome,
+        preco: parseFloat(preco),
+        categoria: categoria,
+        foto: urlFotoFinal,
+        visivel: true
+    };
+
+    // No seu código o endpoint e o método mudam se for edição ou cadastro novo
+    const endpoint = `${API_BASE}/produtos`;
+    const metodo = 'POST';
+
+    try {
+        const res = await fetch(endpoint, {
+            method: metodo,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const respostaDados = await res.json();
+
+        if (!res.ok) {
+            throw new Error(respostaDados.error || "Erro ao salvar no banco de dados.");
+        }
+
+        alert("Acervo atualizado com sucesso!");
+        limparFormulario();
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (erro) {
+        alert("Falha no fluxo: " + erro.message);
+    }
+}
 
         function editarProduto(id) {
             const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
@@ -648,26 +660,40 @@
         }
 
         async function toggleVisibilidadeProduto(id, statusAtual) {
-            let token = localStorage.getItem('token_lari_admin');
-            if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+    let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
 
-            try {
-                const res = await fetch(`${API_BASE}/produtos/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': token
-                    },
-                    body: JSON.stringify({ visivel: !statusAtual })
-                });
+    // Encontra o produto atual no teu dataset para não perder os dados dele
+    const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+    if (!prod) return;
 
-                if (!res.ok) throw new Error("Erro ao mudar visibilidade.");
-                carregarProdutosAdmin();
-                carregarProdutosVitrine();
-            } catch (err) {
-                alert(err.message);
-            }
-        }
+    // Monta o payload com todos os campos que o Python exige, invertendo apenas a visibilidade
+    const payload = {
+        id_produto: prod.id_produto,
+        nome: prod.nome,
+        preco: parseFloat(prod.preco),
+        categoria: prod.categoria,
+        foto: prod.foto,
+        visivel: !statusAtual
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/produtos`, {
+            method: 'POST', // Alinhado com a rota do Python
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Erro ao mudar visibilidade.");
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (err) {
+        alert(err.message);
+    }
+}
 
         function limparFormulario() {
             editingProduct = null;
