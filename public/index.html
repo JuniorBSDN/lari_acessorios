@@ -65,6 +65,7 @@
         </defs>
     </svg>
 
+    <!-- VITRINE DO CLIENTE (ABERTA POR PADRÃO) -->
     <div id="view-client" class="block pb-24 md:pb-6">
         <header class="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-40 w-full px-4 md:px-8 py-4">
             <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
@@ -136,6 +137,7 @@
         </button>
     </div>
 
+    <!-- PAINEL ADMINISTRATIVO RESTRITO -->
     <div id="view-admin" class="hidden min-h-screen bg-neutral-50">
         <header class="bg-black text-white py-5 px-4 md:px-8 sticky top-0 z-40">
             <div class="max-w-[1600px] mx-auto flex items-center justify-between">
@@ -241,6 +243,7 @@
         </div>
     </div>
 
+    <!-- SACOLA / CHECKOUT DE PRODUTOS -->
     <div id="checkout-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center md:justify-end">
         <div class="bg-white border-t md:border-t-0 md:border-l border-neutral-200 w-full max-w-md h-[90vh] md:h-screen rounded-t-2xl md:rounded-t-none p-6 space-y-6 overflow-y-auto shadow-2xl flex flex-col justify-between">
             <div class="flex flex-col h-full overflow-hidden">
@@ -268,24 +271,6 @@
         </div>
     </div>
 
-    <div id="login-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 border border-neutral-100 shadow-xl">
-            <div class="text-center space-y-1">
-                <h3 class="font-luxury text-xl tracking-wider text-black uppercase">Acesso Restrito</h3>
-                <p class="text-xs text-neutral-400 font-light">Insira a credencial da marca LariAcessórios</p>
-            </div>
-            <form onsubmit="autenticarAdmin(event)" class="space-y-4">
-                <div class="space-y-1">
-                    <input type="password" id="admin-password-input" placeholder="Senha administrativa" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black text-center font-mono" required>
-                </div>
-                <div class="flex gap-2">
-                    <button type="button" onclick="fecharModalLogin()" class="w-1/3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 font-medium py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Voltar</button>
-                    <button type="submit" class="w-2/3 bg-black hover:bg-neutral-900 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Autenticar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script>
         const API_BASE = '/api';
         let datasetProducts = [];
@@ -295,10 +280,8 @@
         let editingProduct = null;
         let selectedImageFile = null;
 
-        // INICIALIZAÇÃO AUTOMÁTICA DA APLICAÇÃO
-        window.addEventListener('DOMContentLoaded', () => {
-            carregarProdutosVitrine();
-        });
+        // INICIALIZAÇÃO AUTOMÁTICA DA VITRINE PÚBLICA
+        window.addEventListener('DOMContentLoaded', carregarProdutosVitrine);
 
         // ==========================================
         // CONSUMO DA API & MONTAGEM VITRINE CLIENTE
@@ -408,13 +391,11 @@
 
             const totalFormatado = valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-            // Atualiza indicadores visuais
             document.getElementById('cart-count-pc').innerText = totalItens;
             document.getElementById('cart-count-mobile').innerText = totalItens;
             document.getElementById('cart-total-mobile').innerText = totalFormatado;
             document.getElementById('modal-total-value').innerText = totalFormatado;
 
-            // Barra mobile deslizante
             const barMobile = document.getElementById('cart-bar-mobile');
             if (totalItens > 0) {
                 barMobile.classList.remove('translate-y-full');
@@ -496,255 +477,62 @@
             msg += `\n📞 *Contato:* ${tel}`;
             if (end) msg += `\n🏠 *Endereço/Retirada:* ${end}`;
 
-            const foneSuporte = "5591983050116"; // Configuração padrão da marca
+            const foneSuporte = "5591983050116"; 
             window.open(`https://api.whatsapp.com/send?phone=${foneSuporte}&text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         // ==========================================
-        // FLUXO DE LOGIN & MODAL ADMINISTRATIVO
+        // FLUXO DE COMPORTAMENTO & SEGURANÇA ADMIN
         // ==========================================
-        function fecharModalLogin() {
-            const modal = document.getElementById('login-modal');
-            if (modal) modal.classList.add('hidden');
-            const inputSenha = document.getElementById('admin-password-input');
-            if (inputSenha) inputSenha.value = '';
-        }
+        async function switchView(view) {
+            if (view === 'admin') {
+                // EXCLUSIVO: Dispara autenticação sob demanda ao tentar entrar no painel
+                const autorizado = await verificarAcessoAdminOnDemand();
+                if (!autorizado) return;
 
-        function autenticarAdmin(event) {
-            if (event) event.preventDefault();
-            const inputSenha = document.getElementById('admin-password-input');
-            if (!inputSenha) return;
-            const senha = inputSenha.value.trim();
-            if (!senha) {
-                alert('Por favor, informe a senha administrativa.');
-                return;
+                document.getElementById('view-client').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                if (typeof carregarProdutosAdmin === 'function') carregarProdutosAdmin();
+            } else {
+                document.getElementById('view-admin').classList.add('hidden');
+                document.getElementById('view-client').classList.remove('hidden');
             }
-            efetuarLoginAdmin(senha);
         }
 
-        async function efetuarLoginAdmin(senha) {
+        async function verificarAcessoAdminOnDemand() {
+            // Se já está logado, libera direto
+            if (localStorage.getItem('token_lari_admin')) {
+                return true;
+            }
+
+            const senha = prompt("Senha Administrativa LariAcessórios:");
+            if (!senha) return false; 
+
             try {
                 const resposta = await fetch(`${API_BASE}/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ senha: senha })
                 });
+
                 const dados = await resposta.json();
+
                 if (!resposta.ok) {
-                    alert(dados.error || 'Senha administrativa inválida.');
-                    return;
+                    alert(dados.erro || "Acesso Negado!");
+                    return false;
+                } else {
+                    localStorage.setItem('token_lari_admin', dados.token || "Bearer sessao_valida_lari_premium");
+                    return true;
                 }
-                localStorage.setItem('lari_admin_token', dados.token);
-                fecharModalLogin();
-                switchView('admin');
             } catch (erro) {
-                console.error("Erro na autenticação:", erro);
-                alert('Não foi possível conectar ao servidor da API.');
+                alert("Erro de conexão com o servidor da API.");
+                return false;
             }
         }
 
         function logoutAdmin() {
-            localStorage.removeItem('lari_admin_token');
-            switchView('client');
-        }
-
-        function switchView(view) {
-            const client = document.getElementById('view-client');
-            const admin = document.getElementById('view-admin');
-
-            if (view === 'admin') {
-                const token = localStorage.getItem('lari_admin_token');
-                if (!token) {
-                    document.getElementById('login-modal').classList.remove('hidden');
-                    return;
-                }
-                client.classList.add('hidden');
-                admin.classList.remove('hidden');
-                carregarProdutosAdmin();
-            } else {
-                admin.classList.add('hidden');
-                client.classList.remove('hidden');
-                carregarProdutosVitrine(); // Atualiza a vitrine principal ao voltar
-            }
-        }
-
-        // ==========================================
-        // CRUD ADMINISTRATIVO (POSTGRESQL & BLOB)
-        // ==========================================
-        async function carregarProdutosAdmin() {
-            try {
-                const resposta = await fetch(`${API_BASE}/produtos`);
-                datasetProducts = await resposta.json();
-                atualizarDashboard();
-                renderizarTabelaAdmin();
-            } catch (erro) {
-                console.error(erro);
-            }
-        }
-
-        function atualizarDashboard() {
-            const valorAcervo = datasetProducts.reduce((acc, p) => acc + Number(p.preco || 0), 0);
-            document.getElementById('dash-faturamento').innerText = valorAcervo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('dash-pedidos').innerText = datasetProducts.length;
-        }
-
-        function renderizarTabelaAdmin() {
-            const tbody = document.getElementById('admin-table-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            datasetProducts.forEach(produto => {
-                tbody.innerHTML += `
-                <tr class="hover:bg-neutral-50/50 transition-colors">
-                    <td class="p-4">
-                        <div class="flex items-center gap-3">
-                            <img src="${produto.foto}" class="w-12 h-12 rounded-lg object-cover border border-neutral-100">
-                            <div>
-                                <div class="font-medium text-neutral-900">${produto.nome}</div>
-                                <div class="text-[10px] text-neutral-400 font-mono">${produto.id_produto}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-4 uppercase tracking-wider text-[10px] text-neutral-500">${produto.categoria}</td>
-                    <td class="p-4 font-semibold text-neutral-900">${Number(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                    <td class="p-4 text-center text-sm">${produto.visivel !== false ? '✅' : '❌'}</td>
-                    <td class="p-4 text-right space-x-2">
-                        <button onclick="editarProduto('${produto.id_produto}')" class="text-blue-600 hover:text-blue-800 font-medium transition-colors">Editar</button>
-                        <button onclick="removerProduto('${produto.id_produto}')" class="text-red-600 hover:text-red-800 font-medium transition-colors">Excluir</button>
-                    </td>
-                </tr>
-                `;
-            });
-        }
-
-        function processImageFile(input) {
-            if (input.files && input.files[0]) {
-                selectedImageFile = input.files[0];
-                document.getElementById('upload-placeholder-view').classList.add('hidden');
-                const containerPreview = document.getElementById('upload-preview-container');
-                containerPreview.classList.remove('hidden');
-                containerPreview.classList.add('flex');
-                document.getElementById('upload-preview-img').src = URL.createObjectURL(selectedImageFile);
-            }
-        }
-
-        async function salvarProdutoCompleto() {
-            const token = localStorage.getItem('lari_admin_token');
-            if (!token) {
-                alert("Sessão expirada. Autentique-se novamente.");
-                switchView('client');
-                return;
-            }
-
-            const idExistente = document.getElementById('prod-id').value;
-            const nome = document.getElementById('prod-nome').value.trim();
-            const preco = document.getElementById('prod-preco').value;
-            const categoria = document.getElementById('prod-categoria').value;
-
-            if (!nome || !preco || !categoria) {
-                alert("Por favor, preencha todos os campos obrigatórios.");
-                return;
-            }
-
-            const id_produto = idExistente || nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
-            let urlFoto = editingProduct ? editingProduct.foto : '';
-
-            try {
-                if (selectedImageFile) {
-                    const formData = new FormData();
-                    formData.append('foto', selectedImageFile);
-
-                    const resUpload = await fetch(`${API_BASE}/upload`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` },
-                        body: formData
-                    });
-
-                    const dadosUpload = await resUpload.json();
-                    if (!resUpload.ok) throw new Error(dadosUpload.error || "Erro ao subir imagem.");
-                    urlFoto = dadosUpload.url;
-                }
-
-                if (!urlFoto) {
-                    alert("Por favor, selecione uma imagem para este acessório.");
-                    return;
-                }
-
-                const payload = {
-                    id_produto: id_produto,
-                    nome: nome,
-                    preco: parseFloat(preco),
-                    categoria: categoria,
-                    foto: urlFoto,
-                    visivel: true
-                };
-
-                const resSalvar = await fetch(`${API_BASE}/produtos`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const dadosSalvar = await resSalvar.json();
-                if (!resSalvar.ok) throw new Error(dadosSalvar.error || "Erro ao salvar produto.");
-
-                alert("Produto salvo com sucesso no acervo!");
-                limparFormulario();
-                carregarProdutosAdmin();
-
-            } catch (erro) {
-                console.error(erro);
-                alert(erro.message);
-            }
-        }
-
-        function editarProduto(id) {
-            const produto = datasetProducts.find(p => String(p.id_produto) === String(id));
-            if (!produto) return;
-
-            editingProduct = produto;
-
-            document.getElementById('prod-id').value = produto.id_produto;
-            document.getElementById('prod-nome').value = produto.nome;
-            document.getElementById('prod-preco').value = produto.preco;
-            document.getElementById('prod-categoria').value = produto.categoria;
-
-            document.getElementById('form-title').innerText = 'Editar Produto';
-            document.getElementById('btn-cancelar').classList.remove('hidden');
-
-            document.getElementById('upload-placeholder-view').classList.add('hidden');
-            const containerPreview = document.getElementById('upload-preview-container');
-            containerPreview.classList.remove('hidden');
-            containerPreview.classList.add('flex');
-            document.getElementById('upload-preview-img').src = produto.foto;
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        async function removerProduto(id) {
-            const token = localStorage.getItem('lari_admin_token');
-            if (!token) return;
-
-            if (!confirm(`Deseja remover permanentemente o acessório ID: ${id}?`)) return;
-
-            try {
-                const resposta = await fetch(`${API_BASE}/produtos/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                const dados = await resposta.json();
-                if (!resposta.ok) throw new Error(dados.error || "Não foi possível excluir.");
-
-                alert("Produto removido com sucesso.");
-                carregarProdutosAdmin();
-            } catch (erro) {
-                console.error(erro);
-                alert(erro.message);
-            }
+            localStorage.removeItem('token_lari_admin');
+            window.location.reload();
         }
 
         function limparFormulario() {
@@ -764,6 +552,21 @@
             containerPreview.classList.add('hidden');
             containerPreview.classList.remove('flex');
             document.getElementById('upload-preview-img').src = '';
+        }
+
+        function processImageFile(input) {
+            if (input.files && input.files[0]) {
+                selectedImageFile = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('upload-placeholder-view').classList.add('hidden');
+                    const containerPreview = document.getElementById('upload-preview-container');
+                    containerPreview.classList.remove('hidden');
+                    containerPreview.classList.add('flex');
+                    document.getElementById('upload-preview-img').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
         }
     </script>
 </body>
