@@ -57,7 +57,7 @@ except Exception as e:
 # =====================================================================
 @app.route("/api/admin/login", methods=["POST"])
 @app.route("/admin/login", methods=["POST"])
-def efetuari_login_administrativo():
+def efetuar_login_administrativo():
     dados = request.get_json() or {}
     senha_fornecida = dados.get("senha")
 
