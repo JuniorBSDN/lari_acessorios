@@ -533,16 +533,15 @@
             });
         }
 
+// 1. SALVAR / EDITAR PRODUTO
 async function salvarProdutoCompleto() {
     const id = document.getElementById('prod-id').value;
     const nome = document.getElementById('prod-nome').value.trim();
     const preco = document.getElementById('prod-preco').value.trim();
     const categoria = document.getElementById('prod-categoria').value;
-
+    
     let token = localStorage.getItem('token_lari_admin');
-    if (token && !token.startsWith('Bearer ')) {
-        token = `Bearer ${token}`;
-    }
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
 
     if (!nome || !preco) {
         alert("Por favor, preencha todos os campos fundamentais.");
@@ -551,12 +550,10 @@ async function salvarProdutoCompleto() {
 
     let urlFotoFinal = editingProduct ? editingProduct.foto : '';
 
-    // Se houver uma nova imagem selecionada, faz o upload primeiro
     if (selectedImageFile) {
         const formData = new FormData();
-        // Alterado de 'file' para 'foto' para alinhar com o request.files['foto'] do Python
-        formData.append('foto', selectedImageFile);
-
+        formData.append('foto', selectedImageFile); 
+        
         try {
             const uploadRes = await fetch(`${API_BASE}/upload`, {
                 method: 'POST',
@@ -565,11 +562,7 @@ async function salvarProdutoCompleto() {
             });
 
             const uploadDados = await uploadRes.json();
-
-            if (!uploadRes.ok) {
-                throw new Error(uploadDados.error || "Falha ao processar arquivo.");
-            }
-
+            if (!uploadRes.ok) throw new Error(uploadDados.error || "Falha ao processar arquivo.");
             urlFotoFinal = uploadDados.url;
         } catch (err) {
             alert("Erro no upload da imagem: " + err.message);
@@ -583,7 +576,7 @@ async function salvarProdutoCompleto() {
     }
 
     const payload = {
-        id_produto: id || crypto.randomUUID(), // Garante o id_produto exigido pelo seu Python
+        id_produto: id || crypto.randomUUID(),
         nome: nome,
         preco: parseFloat(preco),
         categoria: categoria,
@@ -591,13 +584,9 @@ async function salvarProdutoCompleto() {
         visivel: true
     };
 
-    // No seu código o endpoint e o método mudam se for edição ou cadastro novo
-    const endpoint = `${API_BASE}/produtos`;
-    const metodo = 'POST';
-
     try {
-        const res = await fetch(endpoint, {
-            method: metodo,
+        const res = await fetch(`${API_BASE}/produtos`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': token
@@ -606,10 +595,7 @@ async function salvarProdutoCompleto() {
         });
 
         const respostaDados = await res.json();
-
-        if (!res.ok) {
-            throw new Error(respostaDados.error || "Erro ao salvar no banco de dados.");
-        }
+        if (!res.ok) throw new Error(respostaDados.error || "Erro ao salvar no banco.");
 
         alert("Acervo atualizado com sucesso!");
         limparFormulario();
@@ -617,6 +603,66 @@ async function salvarProdutoCompleto() {
         carregarProdutosVitrine();
     } catch (erro) {
         alert("Falha no fluxo: " + erro.message);
+    }
+}
+
+// 2. EXCLUIR PRODUTO PERMANENTEMENTE
+async function deletarProduto(id) {
+    if (!confirm("Tem certeza que deseja remover este item permanentemente do acervo?")) return;
+    let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+
+    try {
+        const res = await fetch(`${API_BASE}/produtos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token }
+        });
+
+        const dados = await res.json();
+        if (!res.ok) throw new Error(dados.error || "Erro na exclusão.");
+
+        alert("Item removido do acervo.");
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+// 3. ALTERAR VISIBILIDADE (OCULTAR / MOSTRAR)
+async function toggleVisibilidadeProduto(id, statusAtual) {
+    let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+
+    const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+    if (!prod) return;
+
+    const payload = {
+        id_produto: prod.id_produto,
+        nome: prod.nome,
+        preco: parseFloat(prod.preco),
+        categoria: prod.categoria,
+        foto: prod.foto,
+        visivel: !statusAtual
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/produtos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const dados = await res.json();
+        if (!res.ok) throw new Error(dados.error || "Erro ao mudar visibilidade.");
+        
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (err) {
+        alert(err.message);
     }
 }
 
