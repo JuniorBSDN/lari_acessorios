@@ -91,7 +91,7 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-pulse"></span>
                         Catálogo Online
                     </div>
-                    <button onclick="switchView('admin')" class="flex items-center gap-2 text-xs tracking-wider uppercase font-medium text-neutral-500 hover:text-black border border-neutral-200 hover:border-black px-3 py-1.5 rounded-full transition-all duration-300">
+                    <button onclick="switchView('admin')" class="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold text-neutral-600 hover:text-black transition-colors">
                         <span class="material-symbols-rounded text-sm text-gold">lock</span> Painel Lari
                     </button>
                 </div>
@@ -274,414 +274,497 @@
                 <h3 class="font-luxury text-xl tracking-wider text-black uppercase">Acesso Restrito</h3>
                 <p class="text-xs text-neutral-400 font-light">Insira a credencial da marca LariAcessórios</p>
             </div>
-            <div class="space-y-1">
-                <input type="password" id="admin-password-input" placeholder="Senha administrativa" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black text-center font-mono">
-            </div>
-            <div class="flex gap-2">
-                <button onclick="fecharModalLogin()" class="w-1/3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 font-medium py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Voltar</button>
-                <button onclick="autenticarAdmin()" class="w-2/3 bg-black hover:bg-neutral-900 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Autenticar</button>
-            </div>
+            <form onsubmit="autenticarAdmin(event)" class="space-y-4">
+                <div class="space-y-1">
+                    <input type="password" id="admin-password-input" placeholder="Senha administrativa" class="w-full p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-black text-center font-mono" required>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="fecharModalLogin()" class="w-1/3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 font-medium py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Voltar</button>
+                    <button type="submit" class="w-2/3 bg-black hover:bg-neutral-900 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-colors">Autenticar</button>
+                </div>
+            </form>
         </div>
     </div>
 
-   <script>
-   // ===============================
-// LOGIN ADMIN
-// ===============================
+    <script>
+        const API_BASE = '/api';
+        let datasetProducts = [];
+        let cart = {};
+        let currentCategory = 'todos';
+        let currentSearchQuery = '';
+        let editingProduct = null;
+        let selectedImageFile = null;
 
-function fecharModalLogin() {
+        // INICIALIZAÇÃO AUTOMÁTICA DA APLICAÇÃO
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarProdutosVitrine();
+        });
 
-    const modal =
-        document.getElementById(
-            'login-modal'
-        );
-
-    if (!modal) return;
-
-    modal.classList.add('hidden');
-
-    document.getElementById(
-        'admin-password-input'
-    ).value = '';
-}
-
-function autenticarAdmin() {
-
-    const senha =
-        document.getElementById(
-            'admin-password-input'
-        ).value
-        .trim();
-
-    if (!senha) {
-
-        alert('Informe a senha.');
-
-        return;
-    }
-
-    efetuarLoginAdmin(senha);
-}
-
-async function efetuarLoginAdmin(senha) {
-
-    try {
-
-        const resposta =
-            await fetch(
-                `${API_BASE}/admin/login`,
-                {
-                    method:'POST',
-                    headers:{
-                        'Content-Type':
-                        'application/json'
-                    },
-                    body:JSON.stringify({
-                        senha
-                    })
-                }
-            );
-
-        const dados =
-            await resposta.json();
-
-        if (!resposta.ok) {
-
-            alert(
-                dados.error ||
-                'Senha inválida.'
-            );
-
-            return;
-        }
-
-        localStorage.setItem(
-            'lari_admin_token',
-            dados.token
-        );
-
-        fecharModalLogin();
-
-        switchView('admin');
-
-    } catch (erro) {
-
-        console.error(erro);
-
-        alert(
-            'Erro ao autenticar.'
-        );
-    }
-}
-
-function logoutAdmin() {
-
-    localStorage.removeItem(
-        'lari_admin_token'
-    );
-
-    switchView('client');
-}
-
-function switchView(view) {
-
-    const client =
-        document.getElementById(
-            'view-client'
-        );
-
-    const admin =
-        document.getElementById(
-            'view-admin'
-        );
-
-    if (
-        view === 'admin'
-    ) {
-
-        const token =
-            localStorage.getItem(
-                'lari_admin_token'
-            );
-
-        if (!token) {
-
-            document
-                .getElementById(
-                    'login-modal'
-                )
-                .classList
-                .remove('hidden');
-
-            return;
-        }
-
-        client.classList.add(
-            'hidden'
-        );
-
-        admin.classList.remove(
-            'hidden'
-        );
-
-        carregarProdutosAdmin();
-
-    } else {
-
-        admin.classList.add(
-            'hidden'
-        );
-
-        client.classList.remove(
-            'hidden'
-        );
-    }
-}
-
-// ===============================
-// DASHBOARD
-// ===============================
-
-async function carregarProdutosAdmin() {
-
-    try {
-
-        const resposta =
-            await fetch(
-                `${API_BASE}/produtos`
-            );
-
-        datasetProducts =
-            await resposta.json();
-
-        atualizarDashboard();
-
-        renderizarTabelaAdmin();
-
-    } catch (erro) {
-
-        console.error(erro);
-    }
-}
-
-function atualizarDashboard() {
-
-    const valorAcervo =
-        datasetProducts.reduce(
-            (acc,p)=>
-                acc +
-                Number(
-                    p.preco || 0
-                ),
-            0
-        );
-
-    document.getElementById(
-        'dash-faturamento'
-    ).innerText =
-        valorAcervo.toLocaleString(
-            'pt-BR',
-            {
-                style:'currency',
-                currency:'BRL'
+        // ==========================================
+        // CONSUMO DA API & MONTAGEM VITRINE CLIENTE
+        // ==========================================
+        async function carregarProdutosVitrine() {
+            try {
+                const resposta = await fetch(`${API_BASE}/produtos`);
+                datasetProducts = await resposta.json();
+                renderizarVitrine();
+            } catch (erro) {
+                console.error("Erro ao buscar produtos da API:", erro);
             }
-        );
+        }
 
-    document.getElementById(
-        'dash-pedidos'
-    ).innerText =
-        datasetProducts.length;
-}
+        function renderizarVitrine() {
+            const grid = document.getElementById('products-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
 
-// ===============================
-// TABELA ADMIN
-// ===============================
+            const produtosFiltrados = datasetProducts.filter(p => {
+                const matchesCategory = (currentCategory === 'todos' || p.categoria === currentCategory);
+                const matchesSearch = p.nome.toLowerCase().includes(currentSearchQuery.toLowerCase());
+                const isVisible = p.visivel !== false;
+                return matchesCategory && matchesSearch && isVisible;
+            });
 
-function renderizarTabelaAdmin() {
-
-    const tbody =
-        document.getElementById(
-            'admin-table-body'
-        );
-
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-
-    datasetProducts.forEach(produto => {
-
-        tbody.innerHTML += `
-        <tr>
-
-            <td class="p-4">
-
-                <div class="flex items-center gap-3">
-
-                    <img
-                        src="${produto.foto}"
-                        class="w-12 h-12 rounded-lg object-cover"
-                    >
-
-                    <div>
-
-                        <div class="font-medium">
-                            ${produto.nome}
-                        </div>
-
-                        <div class="text-xs text-neutral-400">
-                            ${produto.id_produto}
-                        </div>
-
+            if (produtosFiltrados.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-neutral-400 font-light text-sm">
+                        Nenhum acessório encontrado nesta seleção.
                     </div>
+                `;
+                return;
+            }
 
-                </div>
+            produtosFiltrados.forEach(p => {
+                grid.innerHTML += `
+                    <div class="group bg-white border border-neutral-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between">
+                        <div class="relative overflow-hidden aspect-square bg-neutral-50">
+                            <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <span class="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase text-neutral-600 border border-neutral-200/40">${p.categoria}</span>
+                        </div>
+                        <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-medium text-neutral-900 text-sm line-clamp-2 leading-tight">${p.nome}</h4>
+                            </div>
+                            <div class="pt-1 flex items-center justify-between gap-2">
+                                <span class="font-luxury text-base font-bold text-neutral-900">${Number(p.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="bg-neutral-50 border border-neutral-200 hover:bg-black hover:text-white text-neutral-700 p-2 rounded-xl transition-colors flex items-center justify-center shrink-0">
+                                    <span class="material-symbols-rounded text-xl">add_shopping_cart</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
 
-            </td>
+        // CONTROLADORES DE FILTRO & BUSCA
+        function filterCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('bg-black', 'text-white', 'font-semibold');
+                btn.classList.add('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
+            });
+            const activeBtn = document.getElementById(`btn-cat-${cat}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-neutral-50', 'border', 'border-neutral-200', 'text-neutral-600');
+                activeBtn.classList.add('bg-black', 'text-white', 'font-semibold');
+            }
+            renderizarVitrine();
+        }
 
-            <td class="p-4">
-                ${produto.categoria}
-            </td>
+        function syncSearch(val) {
+            currentSearchQuery = val;
+            document.getElementById('search-input-pc').value = val;
+            document.getElementById('search-input-mobile').value = val;
+            renderizarVitrine();
+        }
 
-            <td class="p-4">
+        // ==========================================
+        // SISTEMA DE SACOLA DE COMPRAS (CARRINHO)
+        // ==========================================
+        function adicionarAoCarrinho(id) {
+            cart[id] = (cart[id] || 0) + 1;
+            atualizarEstadoCarrinho();
+        }
 
-                ${Number(produto.preco)
-                    .toLocaleString(
-                        'pt-BR',
-                        {
-                            style:'currency',
-                            currency:'BRL'
-                        }
-                    )}
+        function alterarQuantidadeCarrinho(id, delta) {
+            if (!cart[id]) return;
+            cart[id] += delta;
+            if (cart[id] <= 0) delete cart[id];
+            atualizarEstadoCarrinho();
+        }
 
-            </td>
+        function atualizarEstadoCarrinho() {
+            let totalItens = 0;
+            let valorTotal = 0;
 
-            <td class="p-4 text-center">
+            for (const id in cart) {
+                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+                if (prod) {
+                    totalItens += cart[id];
+                    valorTotal += (parseFloat(prod.preco) * cart[id]);
+                }
+            }
 
-                ${
-                    produto.visivel !== false
-                    ? '✅'
-                    : '❌'
+            const totalFormatado = valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // Atualiza indicadores visuais
+            document.getElementById('cart-count-pc').innerText = totalItens;
+            document.getElementById('cart-count-mobile').innerText = totalItens;
+            document.getElementById('cart-total-mobile').innerText = totalFormatado;
+            document.getElementById('modal-total-value').innerText = totalFormatado;
+
+            // Barra mobile deslizante
+            const barMobile = document.getElementById('cart-bar-mobile');
+            if (totalItens > 0) {
+                barMobile.classList.remove('translate-y-full');
+            } else {
+                barMobile.classList.add('translate-y-full');
+                document.getElementById('checkout-modal').classList.add('hidden');
+            }
+
+            renderizarItensCarrinhoModal();
+        }
+
+        function toggleCheckoutModal() {
+            const modal = document.getElementById('checkout-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function renderizarItensCarrinhoModal() {
+            const container = document.getElementById('cart-items-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let temItens = false;
+
+            for (const id in cart) {
+                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+                if (prod) {
+                    temItens = true;
+                    container.innerHTML += `
+                        <div class="flex items-center gap-4 py-3">
+                            <img src="${prod.foto}" class="w-16 h-16 rounded-xl object-cover border border-neutral-100 shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-medium text-xs text-neutral-900 truncate">${prod.nome}</h4>
+                                <p class="text-neutral-400 text-[11px] mt-0.5">${Number(prod.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                            </div>
+                            <div class="flex items-center border border-neutral-200 rounded-lg overflow-hidden bg-neutral-50 shrink-0">
+                                <button onclick="alterarQuantidadeCarrinho('${id}', -1)" class="px-2 py-1 hover:bg-neutral-200 text-neutral-600 text-xs font-bold">-</button>
+                                <span class="px-2 text-xs font-semibold text-neutral-800">${cart[id]}</span>
+                                <button onclick="alterarQuantidadeCarrinho('${id}', 1)" class="px-2 py-1 hover:bg-neutral-200 text-neutral-600 text-xs font-bold">+</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            if (!temItens) {
+                container.innerHTML = `<p class="text-center py-8 text-neutral-400 font-light text-xs">Sua sacola de curadorias está vazia.</p>`;
+            }
+        }
+
+        function enviarPedido() {
+            const nome = document.getElementById('client-name').value.trim();
+            const tel = document.getElementById('client-phone').value.trim();
+            const end = document.getElementById('client-address').value.trim();
+
+            if (!nome || !tel) {
+                alert("Por favor, preencha seu nome e telefone para contato.");
+                return;
+            }
+
+            let temItens = false;
+            let msg = `Olá! Gostaria de fazer um pedido na *LariAcessórios*:\n\n`;
+
+            for (const id in cart) {
+                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+                if (prod) {
+                    temItens = true;
+                    msg += `🔹 *${prod.nome}* (${cart[id]}x) — R$ ${(parseFloat(prod.preco) * cart[id]).toFixed(2)}\n`;
+                }
+            }
+
+            if (!temItens) {
+                alert("Sua sacola está vazia.");
+                return;
+            }
+
+            msg += `\n💰 *Total:* ${document.getElementById('modal-total-value').innerText}`;
+            msg += `\n\n📌 *Dados do Cliente:*`;
+            msg += `\n👤 *Nome:* ${nome}`;
+            msg += `\n📞 *Contato:* ${tel}`;
+            if (end) msg += `\n🏠 *Endereço/Retirada:* ${end}`;
+
+            const foneSuporte = "5591983050116"; // Configuração padrão da marca
+            window.open(`https://api.whatsapp.com/send?phone=${foneSuporte}&text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        // ==========================================
+        // FLUXO DE LOGIN & MODAL ADMINISTRATIVO
+        // ==========================================
+        function fecharModalLogin() {
+            const modal = document.getElementById('login-modal');
+            if (modal) modal.classList.add('hidden');
+            const inputSenha = document.getElementById('admin-password-input');
+            if (inputSenha) inputSenha.value = '';
+        }
+
+        function autenticarAdmin(event) {
+            if (event) event.preventDefault();
+            const inputSenha = document.getElementById('admin-password-input');
+            if (!inputSenha) return;
+            const senha = inputSenha.value.trim();
+            if (!senha) {
+                alert('Por favor, informe a senha administrativa.');
+                return;
+            }
+            efetuarLoginAdmin(senha);
+        }
+
+        async function efetuarLoginAdmin(senha) {
+            try {
+                const resposta = await fetch(`${API_BASE}/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senha: senha })
+                });
+                const dados = await resposta.json();
+                if (!resposta.ok) {
+                    alert(dados.error || 'Senha administrativa inválida.');
+                    return;
+                }
+                localStorage.setItem('lari_admin_token', dados.token);
+                fecharModalLogin();
+                switchView('admin');
+            } catch (erro) {
+                console.error("Erro na autenticação:", erro);
+                alert('Não foi possível conectar ao servidor da API.');
+            }
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('lari_admin_token');
+            switchView('client');
+        }
+
+        function switchView(view) {
+            const client = document.getElementById('view-client');
+            const admin = document.getElementById('view-admin');
+
+            if (view === 'admin') {
+                const token = localStorage.getItem('lari_admin_token');
+                if (!token) {
+                    document.getElementById('login-modal').classList.remove('hidden');
+                    return;
+                }
+                client.classList.add('hidden');
+                admin.classList.remove('hidden');
+                carregarProdutosAdmin();
+            } else {
+                admin.classList.add('hidden');
+                client.classList.remove('hidden');
+                carregarProdutosVitrine(); // Atualiza a vitrine principal ao voltar
+            }
+        }
+
+        // ==========================================
+        // CRUD ADMINISTRATIVO (POSTGRESQL & BLOB)
+        // ==========================================
+        async function carregarProdutosAdmin() {
+            try {
+                const resposta = await fetch(`${API_BASE}/produtos`);
+                datasetProducts = await resposta.json();
+                atualizarDashboard();
+                renderizarTabelaAdmin();
+            } catch (erro) {
+                console.error(erro);
+            }
+        }
+
+        function atualizarDashboard() {
+            const valorAcervo = datasetProducts.reduce((acc, p) => acc + Number(p.preco || 0), 0);
+            document.getElementById('dash-faturamento').innerText = valorAcervo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('dash-pedidos').innerText = datasetProducts.length;
+        }
+
+        function renderizarTabelaAdmin() {
+            const tbody = document.getElementById('admin-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            datasetProducts.forEach(produto => {
+                tbody.innerHTML += `
+                <tr class="hover:bg-neutral-50/50 transition-colors">
+                    <td class="p-4">
+                        <div class="flex items-center gap-3">
+                            <img src="${produto.foto}" class="w-12 h-12 rounded-lg object-cover border border-neutral-100">
+                            <div>
+                                <div class="font-medium text-neutral-900">${produto.nome}</div>
+                                <div class="text-[10px] text-neutral-400 font-mono">${produto.id_produto}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4 uppercase tracking-wider text-[10px] text-neutral-500">${produto.categoria}</td>
+                    <td class="p-4 font-semibold text-neutral-900">${Number(produto.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td class="p-4 text-center text-sm">${produto.visivel !== false ? '✅' : '❌'}</td>
+                    <td class="p-4 text-right space-x-2">
+                        <button onclick="editarProduto('${produto.id_produto}')" class="text-blue-600 hover:text-blue-800 font-medium transition-colors">Editar</button>
+                        <button onclick="removerProduto('${produto.id_produto}')" class="text-red-600 hover:text-red-800 font-medium transition-colors">Excluir</button>
+                    </td>
+                </tr>
+                `;
+            });
+        }
+
+        function processImageFile(input) {
+            if (input.files && input.files[0]) {
+                selectedImageFile = input.files[0];
+                document.getElementById('upload-placeholder-view').classList.add('hidden');
+                const containerPreview = document.getElementById('upload-preview-container');
+                containerPreview.classList.remove('hidden');
+                containerPreview.classList.add('flex');
+                document.getElementById('upload-preview-img').src = URL.createObjectURL(selectedImageFile);
+            }
+        }
+
+        async function salvarProdutoCompleto() {
+            const token = localStorage.getItem('lari_admin_token');
+            if (!token) {
+                alert("Sessão expirada. Autentique-se novamente.");
+                switchView('client');
+                return;
+            }
+
+            const idExistente = document.getElementById('prod-id').value;
+            const nome = document.getElementById('prod-nome').value.trim();
+            const preco = document.getElementById('prod-preco').value;
+            const categoria = document.getElementById('prod-categoria').value;
+
+            if (!nome || !preco || !categoria) {
+                alert("Por favor, preencha todos os campos obrigatórios.");
+                return;
+            }
+
+            const id_produto = idExistente || nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
+            let urlFoto = editingProduct ? editingProduct.foto : '';
+
+            try {
+                if (selectedImageFile) {
+                    const formData = new FormData();
+                    formData.append('foto', selectedImageFile);
+
+                    const resUpload = await fetch(`${API_BASE}/upload`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    });
+
+                    const dadosUpload = await resUpload.json();
+                    if (!resUpload.ok) throw new Error(dadosUpload.error || "Erro ao subir imagem.");
+                    urlFoto = dadosUpload.url;
                 }
 
-            </td>
+                if (!urlFoto) {
+                    alert("Por favor, selecione uma imagem para este acessório.");
+                    return;
+                }
 
-            <td class="p-4 text-right">
+                const payload = {
+                    id_produto: id_produto,
+                    nome: nome,
+                    preco: parseFloat(preco),
+                    categoria: categoria,
+                    foto: urlFoto,
+                    visivel: true
+                };
 
-                <button
-                    onclick="editarProduto('${produto.id_produto}')"
-                    class="text-blue-500 mr-3"
-                >
-                    Editar
-                </button>
+                const resSalvar = await fetch(`${API_BASE}/produtos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-                <button
-                    onclick="removerProduto('${produto.id_produto}')"
-                    class="text-red-500"
-                >
-                    Excluir
-                </button>
+                const dadosSalvar = await resSalvar.json();
+                if (!resSalvar.ok) throw new Error(dadosSalvar.error || "Erro ao salvar produto.");
 
-            </td>
+                alert("Produto salvo com sucesso no acervo!");
+                limparFormulario();
+                carregarProdutosAdmin();
 
-        </tr>
-        `;
-    });
-}
+            } catch (erro) {
+                console.error(erro);
+                alert(erro.message);
+            }
+        }
 
-// ===============================
-// EDITAR PRODUTO
-// ===============================
+        function editarProduto(id) {
+            const produto = datasetProducts.find(p => String(p.id_produto) === String(id));
+            if (!produto) return;
 
-function editarProduto(id) {
+            editingProduct = produto;
 
-    const produto =
-        datasetProducts.find(
-            p =>
-            String(
-                p.id_produto
-            ) === String(id)
-        );
+            document.getElementById('prod-id').value = produto.id_produto;
+            document.getElementById('prod-nome').value = produto.nome;
+            document.getElementById('prod-preco').value = produto.preco;
+            document.getElementById('prod-categoria').value = produto.categoria;
 
-    if (!produto) return;
+            document.getElementById('form-title').innerText = 'Editar Produto';
+            document.getElementById('btn-cancelar').classList.remove('hidden');
 
-    editingProduct = produto;
+            document.getElementById('upload-placeholder-view').classList.add('hidden');
+            const containerPreview = document.getElementById('upload-preview-container');
+            containerPreview.classList.remove('hidden');
+            containerPreview.classList.add('flex');
+            document.getElementById('upload-preview-img').src = produto.foto;
 
-    document.getElementById(
-        'prod-id'
-    ).value =
-        produto.id_produto;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-    document.getElementById(
-        'prod-nome'
-    ).value =
-        produto.nome;
+        async function removerProduto(id) {
+            const token = localStorage.getItem('lari_admin_token');
+            if (!token) return;
 
-    document.getElementById(
-        'prod-preco'
-    ).value =
-        produto.preco;
+            if (!confirm(`Deseja remover permanentemente o acessório ID: ${id}?`)) return;
 
-    document.getElementById(
-        'prod-categoria'
-    ).value =
-        produto.categoria;
+            try {
+                const resposta = await fetch(`${API_BASE}/produtos/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-    document.getElementById(
-        'form-title'
-    ).innerText =
-        'Editar Produto';
+                const dados = await resposta.json();
+                if (!resposta.ok) throw new Error(dados.error || "Não foi possível excluir.");
 
-    document.getElementById(
-        'btn-cancelar'
-    ).classList.remove(
-        'hidden'
-    );
+                alert("Produto removido com sucesso.");
+                carregarProdutosAdmin();
+            } catch (erro) {
+                console.error(erro);
+                alert(erro.message);
+            }
+        }
 
-    window.scrollTo({
-        top:0,
-        behavior:'smooth'
-    });
-}
+        function limparFormulario() {
+            editingProduct = null;
+            selectedImageFile = null;
 
-// ===============================
-// CANCELAR EDIÇÃO
-// ===============================
+            document.getElementById('prod-id').value = '';
+            document.getElementById('prod-nome').value = '';
+            document.getElementById('prod-preco').value = '';
+            document.getElementById('prod-categoria').selectedIndex = 0;
+            document.getElementById('prod-file').value = '';
+            document.getElementById('form-title').innerText = 'Curar Novo Acessório';
+            document.getElementById('btn-cancelar').classList.add('hidden');
 
-function limparFormulario() {
-
-    editingProduct = null;
-
-    document.getElementById(
-        'prod-id'
-    ).value = '';
-
-    document.getElementById(
-        'prod-nome'
-    ).value = '';
-
-    document.getElementById(
-        'prod-preco'
-    ).value = '';
-
-    document.getElementById(
-        'prod-categoria'
-    ).selectedIndex = 0;
-
-    document.getElementById(
-        'prod-file'
-    ).value = '';
-
-    document.getElementById(
-        'form-title'
-    ).innerText =
-        'Curar Novo Acessório';
-
-    document.getElementById(
-        'btn-cancelar'
-    ).classList.add(
-        'hidden'
-    );
-}
-   </script>
+            document.getElementById('upload-placeholder-view').classList.remove('hidden');
+            const containerPreview = document.getElementById('upload-preview-container');
+            containerPreview.classList.add('hidden');
+            containerPreview.classList.remove('flex');
+            document.getElementById('upload-preview-img').src = '';
+        }
+    </script>
 </body>
 </html>
