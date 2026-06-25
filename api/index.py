@@ -13,7 +13,9 @@ CORS(app)
 # =====================================================================
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
+    "POSTGRES_URL_NON_POOLING")
+
 
 # =====================================================================
 # INFRAESTRUTURA DE BANCO DE DADOS (PostgreSQL)
@@ -21,7 +23,15 @@ DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") 
 def obter_conexao():
     if not DATABASE_URL:
         raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, connect_timeout=5)
+
+    # Adiciona automaticamente o parâmetro de SSL caso seja um banco em nuvem (Neon, Render, etc)
+    url_conexao = DATABASE_URL
+    if "sslmode" not in url_conexao and "?" in url_conexao:
+        url_conexao += "&sslmode=require"
+    elif "sslmode" not in url_conexao:
+        url_conexao += "?sslmode=require"
+
+    conn = psycopg2.connect(url_conexao, cursor_factory=RealDictCursor, connect_timeout=10)
     conn.autocommit = True
     return conn
 
@@ -31,7 +41,6 @@ def inicializar_infraestrutura_banco():
         try:
             conn = obter_conexao()
             cursor = conn.cursor()
-            # Query limpa e com sintaxe SQL 100% correta:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS produtos (
                     id_produto TEXT PRIMARY KEY,
@@ -46,11 +55,13 @@ def inicializar_infraestrutura_banco():
             conn.close()
             print("Infraestrutura do banco de dados verificada/criada com sucesso.")
         except Exception as e:
-            print(f"Aviso ao inicializar banco: {str(e)}")
+            # Blindagem: se o banco falhar na partida, o app não morre.
+            print(f"Aviso importante: O banco de dados está inacessível no momento. Detalhes: {str(e)}")
 
 
-# Inicializa a tabela ao carregar o script
+# Tenta inicializar sem travar o escopo global se houver timeout
 inicializar_infraestrutura_banco()
+
 
 # =====================================================================
 # ROTA: Autenticação Administrativa
@@ -63,13 +74,14 @@ def efetuar_login_administrativo():
     if not ADMIN_PASSWORD:
         return jsonify({"auth": False, "error": "Senha mestra não configurada no servidor."}), 500
 
-    if senha_digitada == ADMIN_PASSWORD:
+    if str(senha_digitada) == str(ADMIN_PASSWORD):
         return jsonify({
             "auth": True,
             "token": "Bearer sessao_valida_lari_premium"
         }), 200
-    
+
     return jsonify({"auth": False, "error": "Credencial inválida."}), 401
+
 
 # =====================================================================
 # ROTA: Upload de Imagens (Vercel Blob Storage)
@@ -93,20 +105,21 @@ def realizar_upload_imagem():
     try:
         nome_arquivo = arquivo.filename
         conteudo_arquivo = arquivo.read()
-        
+
         url_blob = f"https://api.vercel.com/v1/blob/upload?filename={nome_arquivo}"
         headers_blob = {"Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}"}
-        
+
         resposta_vercel = requests.post(url_blob, headers=headers_blob, data=conteudo_arquivo)
-        
+
         if resposta_vercel.status_code != 200:
             return jsonify({"error": f"Vercel Blob rejeitou o upload: {resposta_vercel.text}"}), 500
-            
+
         dados_resposta = resposta_vercel.json()
         return jsonify({"url": dados_resposta.get("url")}), 200
 
     except Exception as e:
         return jsonify({"error": f"Falha no processo de upload: {str(e)}"}), 500
+
 
 # =====================================================================
 # ROTAS: Gerenciamento do Catálogo (Listagem e Persistência)
@@ -142,7 +155,7 @@ def gerenciar_catalogo_produtos():
             """, (str(id_produto), str(nome), float(preco), str(categoria), str(foto), bool(visivel)))
             cursor.close()
             conn.close()
-            return jsonify({"status": "success", "message": "Produto saved successfully."}), 200
+            return jsonify({"status": "success", "message": "Produto salvo com sucesso."}), 200
         except Exception as e:
             return jsonify({"error": f"Erro ao salvar no banco: {str(e)}"}), 500
 
@@ -156,7 +169,8 @@ def gerenciar_catalogo_produtos():
         conn.close()
         return jsonify(lista_produtos), 200
     except Exception as e:
-        return jsonify({"error": f"Erro ao consultar catálogo: {str(e)}"}), 500
+        return jsonify({"error": f"Erro ao consultar catálogo no banco de dados: {str(e)}"}), 500
+
 
 # =====================================================================
 # ROTA: Remoção de Produto por ID
@@ -178,6 +192,7 @@ def remover_produto_banco(id_prod):
         return jsonify({"status": "success", "message": "Produto excluído com sucesso."}), 200
     except Exception as e:
         return jsonify({"error": f"Erro ao remover produto: {str(e)}"}), 500
+
 
 # =====================================================================
 # FALLBACK: Rota residual
