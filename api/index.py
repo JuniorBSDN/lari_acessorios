@@ -13,9 +13,7 @@ CORS(app)
 # =====================================================================
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
-    "POSTGRES_URL_NON_POOLING")
-
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL_NON_POOLING")
 
 # =====================================================================
 # INFRAESTRUTURA DE BANCO DE DADOS (PostgreSQL)
@@ -33,17 +31,7 @@ def inicializar_infraestrutura_banco():
         try:
             conn = obter_conexao()
             cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS produtos (
-                    id_produto TEXT PRIMARY KEY,
-                    nome TEXT NOT EXISTS OR nome TEXT,
-                    preco NUMERIC,
-                    categoria TEXT,
-                    foto TEXT,
-                    visivel BOOLEAN DEFAULT TRUE
-                );
-            """)
-            # Correção para garantir a integridade da tabela caso já exista sem dar erro catastrófico
+            # Query limpa e com sintaxe SQL 100% correta:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS produtos (
                     id_produto TEXT PRIMARY KEY,
@@ -64,7 +52,6 @@ def inicializar_infraestrutura_banco():
 # Inicializa a tabela ao carregar o script
 inicializar_infraestrutura_banco()
 
-
 # =====================================================================
 # ROTA: Autenticação Administrativa
 # =====================================================================
@@ -81,9 +68,8 @@ def efetuar_login_administrativo():
             "auth": True,
             "token": "Bearer sessao_valida_lari_premium"
         }), 200
-
+    
     return jsonify({"auth": False, "error": "Credencial inválida."}), 401
-
 
 # =====================================================================
 # ROTA: Upload de Imagens (Vercel Blob Storage)
@@ -107,21 +93,20 @@ def realizar_upload_imagem():
     try:
         nome_arquivo = arquivo.filename
         conteudo_arquivo = arquivo.read()
-
+        
         url_blob = f"https://api.vercel.com/v1/blob/upload?filename={nome_arquivo}"
         headers_blob = {"Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}"}
-
+        
         resposta_vercel = requests.post(url_blob, headers=headers_blob, data=conteudo_arquivo)
-
+        
         if resposta_vercel.status_code != 200:
             return jsonify({"error": f"Vercel Blob rejeitou o upload: {resposta_vercel.text}"}), 500
-
+            
         dados_resposta = resposta_vercel.json()
         return jsonify({"url": dados_resposta.get("url")}), 200
 
     except Exception as e:
         return jsonify({"error": f"Falha no processo de upload: {str(e)}"}), 500
-
 
 # =====================================================================
 # ROTAS: Gerenciamento do Catálogo (Listagem e Persistência)
@@ -157,11 +142,11 @@ def gerenciar_catalogo_produtos():
             """, (str(id_produto), str(nome), float(preco), str(categoria), str(foto), bool(visivel)))
             cursor.close()
             conn.close()
-            return jsonify({"status": "success", "message": "Produto salvo com sucesso."}), 200
+            return jsonify({"status": "success", "message": "Produto saved successfully."}), 200
         except Exception as e:
             return jsonify({"error": f"Erro ao salvar no banco: {str(e)}"}), 500
 
-    # Método GET: Listar produtos
+    # Método GET
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
@@ -172,7 +157,6 @@ def gerenciar_catalogo_produtos():
         return jsonify(lista_produtos), 200
     except Exception as e:
         return jsonify({"error": f"Erro ao consultar catálogo: {str(e)}"}), 500
-
 
 # =====================================================================
 # ROTA: Remoção de Produto por ID
@@ -195,9 +179,8 @@ def remover_produto_banco(id_prod):
     except Exception as e:
         return jsonify({"error": f"Erro ao remover produto: {str(e)}"}), 500
 
-
 # =====================================================================
-# FALLBACK: Rota residual para evitar quebras de roteamento
+# FALLBACK: Rota residual
 # =====================================================================
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
