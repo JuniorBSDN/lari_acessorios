@@ -65,7 +65,6 @@
         </defs>
     </svg>
 
-    <!-- VITRINE DO CLIENTE (ABERTA POR PADRÃO) -->
     <div id="view-client" class="block pb-24 md:pb-6">
         <header class="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-40 w-full px-4 md:px-8 py-4">
             <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
@@ -137,7 +136,6 @@
         </button>
     </div>
 
-    <!-- PAINEL ADMINISTRATIVO RESTRITO -->
     <div id="view-admin" class="hidden min-h-screen bg-neutral-50">
         <header class="bg-black text-white py-5 px-4 md:px-8 sticky top-0 z-40">
             <div class="max-w-[1600px] mx-auto flex items-center justify-between">
@@ -243,7 +241,6 @@
         </div>
     </div>
 
-    <!-- SACOLA / CHECKOUT DE PRODUTOS -->
     <div id="checkout-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center md:justify-end">
         <div class="bg-white border-t md:border-t-0 md:border-l border-neutral-200 w-full max-w-md h-[90vh] md:h-screen rounded-t-2xl md:rounded-t-none p-6 space-y-6 overflow-y-auto shadow-2xl flex flex-col justify-between">
             <div class="flex flex-col h-full overflow-hidden">
@@ -412,6 +409,354 @@
             modal.classList.toggle('hidden');
         }
 
+        // ==========================================
+        // FLUXO DE COMPORTAMENTO & SEGURANÇA ADMIN
+        // ==========================================
+        async function switchView(view) {
+            if (view === 'admin') {
+                const autorizado = await verificarAcessoAdminOnDemand();
+                if (!autorizado) return;
+
+                document.getElementById('view-client').classList.add('hidden');
+                document.getElementById('view-admin').classList.remove('hidden');
+                carregarProdutosAdmin();
+            } else {
+                document.getElementById('view-admin').classList.add('hidden');
+                document.getElementById('view-client').classList.remove('hidden');
+            }
+        }
+
+        async function verificarAcessoAdminOnDemand() {
+            if (localStorage.getItem('token_lari_admin')) {
+                return true;
+            }
+
+            const senha = prompt("Senha Administrativa LariAcessórios:");
+            if (!senha) return false;
+
+            try {
+                const resposta = await fetch(`${API_BASE}/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senha: senha })
+                });
+
+                const dados = await resposta.json();
+
+                if (!resposta.ok) {
+                    alert(dados.erro || "Acesso Negado!");
+                    return false;
+                } else {
+                    localStorage.setItem('token_lari_admin', dados.token || "Bearer sessao_valida_lari_premium");
+                    return true;
+                }
+            } catch (err) {
+                alert("Erro ao autenticar.");
+                return false;
+            }
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('token_lari_admin');
+            switchView('client');
+        }
+
+        // ==========================================
+        // PROCESSAMENTO DE ARQUIVOS E PREVIEW
+        // ==========================================
+        function processImageFile(input) {
+            if (input.files && input.files[0]) {
+                selectedImageFile = input.files[0];
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('upload-preview-img').src = e.target.result;
+                    document.getElementById('upload-placeholder-view').classList.add('hidden');
+                    document.getElementById('upload-preview-container').classList.remove('hidden');
+                }
+                reader.readAsDataURL(selectedImageFile);
+            }
+        }
+
+        // ==========================================
+        // GERENCIAMENTO DO ACERVO (CRUD)
+        // ==========================================
+        async function carregarProdutosAdmin() {
+            try {
+                const resposta = await fetch(`${API_BASE}/produtos`);
+                datasetProducts = await resposta.json();
+
+                let totalAcervo = 0;
+                datasetProducts.forEach(p => totalAcervo += parseFloat(p.preco));
+
+                document.getElementById('dash-faturamento').innerText = totalAcervo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                document.getElementById('dash-pedidos').innerText = datasetProducts.length;
+
+                renderizarTabelaAdmin();
+            } catch (erro) {
+                console.error("Erro ao carregar painel administrativo:", erro);
+            }
+        }
+
+        function renderizarTabelaAdmin() {
+            const tbody = document.getElementById('admin-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            datasetProducts.forEach(p => {
+                const visivel = p.visivel !== false;
+                tbody.innerHTML += `
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50/80 transition-colors">
+                        <td class="py-4 flex items-center gap-3 font-medium text-neutral-900">
+                            <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-200">
+                            <span class="truncate max-w-[180px] font-semibold">${p.nome}</span>
+                        </td>
+                        <td class="py-4 uppercase tracking-wider text-[10px] text-neutral-500">${p.categoria}</td>
+                        <td class="py-4 font-luxury font-bold">${Number(p.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td class="py-4 text-center">
+                            <button onclick="toggleVisibilidadeProduto('${p.id_produto}', ${visivel})" class="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
+                                <span class="material-symbols-rounded text-base ${visivel ? 'text-emerald-600' : 'text-neutral-400'}">
+                                    ${visivel ? 'visibility' : 'visibility_off'}
+                                </span>
+                            </button>
+                        </td>
+                        <td class="py-4 text-right space-x-1">
+                            <button onclick="editarProduto('${p.id_produto}')" class="p-1.5 rounded-lg text-neutral-500 hover:text-black hover:bg-neutral-100 transition-all">
+                                <span class="material-symbols-rounded text-base">edit</span>
+                            </button>
+                            <button onclick="deletarProduto('${p.id_produto}')" class="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-all">
+                                <span class="material-symbols-rounded text-base">delete</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+// 1. SALVAR / EDITAR PRODUTO
+async function salvarProdutoCompleto() {
+    const id = document.getElementById('prod-id').value;
+    const nome = document.getElementById('prod-nome').value.trim();
+    const preco = document.getElementById('prod-preco').value.trim();
+    const categoria = document.getElementById('prod-categoria').value;
+
+    let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+
+    if (!nome || !preco) {
+        alert("Por favor, preencha todos os campos fundamentais.");
+        return;
+    }
+
+    let urlFotoFinal = editingProduct ? editingProduct.foto : '';
+
+    if (selectedImageFile) {
+        const formData = new FormData();
+        formData.append('foto', selectedImageFile);
+
+        try {
+            const uploadRes = await fetch(`${API_BASE}/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': token },
+                body: formData
+            });
+
+            const uploadDados = await uploadRes.json();
+            if (!uploadRes.ok) throw new Error(uploadDados.error || "Falha ao processar arquivo.");
+            urlFotoFinal = uploadDados.url;
+        } catch (err) {
+            alert("Erro no upload da imagem: " + err.message);
+            return;
+        }
+    }
+
+    if (!urlFotoFinal) {
+        alert("É necessário definir uma imagem para o acessório.");
+        return;
+    }
+
+    const payload = {
+        id_produto: id || crypto.randomUUID(),
+        nome: nome,
+        preco: parseFloat(preco),
+        categoria: categoria,
+        foto: urlFotoFinal,
+        visivel: true
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/produtos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const respostaDados = await res.json();
+        if (!res.ok) throw new Error(respostaDados.error || "Erro ao salvar no banco.");
+
+        alert("Acervo atualizado com sucesso!");
+        limparFormulario();
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (erro) {
+        alert("Falha no fluxo: " + erro.message);
+    }
+}
+
+// 2. EXCLUIR PRODUTO PERMANENTEMENTE
+async function deletarProduto(id) {
+    if (!confirm("Tem certeza que deseja remover este item permanentemente do acervo?")) return;
+    let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+
+    try {
+        const res = await fetch(`${API_BASE}/produtos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token }
+        });
+
+        const dados = await res.json();
+        if (!res.ok) throw new Error(dados.error || "Erro na exclusão.");
+
+        alert("Item removido do acervo.");
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+// 3. ALTERAR VISIBILIDADE (OCULTAR / MOSTRAR)
+async function toggleVisibilidadeProduto(id, statusAtual) {
+    let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+
+    const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+    if (!prod) return;
+
+    const payload = {
+        id_produto: prod.id_produto,
+        nome: prod.nome,
+        preco: parseFloat(prod.preco),
+        categoria: prod.categoria,
+        foto: prod.foto,
+        visivel: !statusAtual
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/produtos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const dados = await res.json();
+        if (!res.ok) throw new Error(dados.error || "Erro ao mudar visibilidade.");
+
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+        function editarProduto(id) {
+            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+            if (!prod) return;
+
+            editingProduct = prod;
+            document.getElementById('prod-id').value = prod.id_produto;
+            document.getElementById('prod-nome').value = prod.nome;
+            document.getElementById('prod-preco').value = prod.preco;
+            document.getElementById('prod-categoria').value = prod.categoria;
+
+            document.getElementById('upload-preview-img').src = prod.foto;
+            document.getElementById('upload-placeholder-view').classList.add('hidden');
+            document.getElementById('upload-preview-container').classList.remove('hidden');
+
+            document.getElementById('form-title').innerText = "Editar Acessório";
+            document.getElementById('btn-cancelar').classList.remove('hidden');
+        }
+
+        async function deletarProduto(id) {
+            if (!confirm("Tem certeza que deseja remover este item permanentemente do acervo?")) return;
+            let token = localStorage.getItem('token_lari_admin');
+            if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+
+            try {
+                const res = await fetch(`${API_BASE}/produtos/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': token }
+                });
+
+                if (!res.ok) throw new Error("Erro na exclusão.");
+
+                alert("Item removido do acervo.");
+                carregarProdutosAdmin();
+                carregarProdutosVitrine();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function toggleVisibilidadeProduto(id, statusAtual) {
+    let token = localStorage.getItem('token_lari_admin');
+    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+
+    // Encontra o produto atual no teu dataset para não perder os dados dele
+    const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+    if (!prod) return;
+
+    // Monta o payload com todos os campos que o Python exige, invertendo apenas a visibilidade
+    const payload = {
+        id_produto: prod.id_produto,
+        nome: prod.nome,
+        preco: parseFloat(prod.preco),
+        categoria: prod.categoria,
+        foto: prod.foto,
+        visivel: !statusAtual
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/produtos`, {
+            method: 'POST', // Alinhado com a rota do Python
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Erro ao mudar visibilidade.");
+        carregarProdutosAdmin();
+        carregarProdutosVitrine();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+        function limparFormulario() {
+            editingProduct = null;
+            selectedImageFile = null;
+            document.getElementById('prod-id').value = '';
+            document.getElementById('prod-nome').value = '';
+            document.getElementById('prod-preco').value = '';
+            document.getElementById('prod-categoria').value = 'relogios';
+            document.getElementById('prod-file').value = '';
+
+            document.getElementById('upload-placeholder-view').classList.remove('hidden');
+            document.getElementById('upload-preview-container').classList.add('hidden');
+            document.getElementById('upload-preview-img').src = '';
+
+            document.getElementById('form-title').innerText = "Curar Novo Acessório";
+            document.getElementById('btn-cancelar').classList.add('hidden');
+        }
+
         function renderizarItensCarrinhoModal() {
             const container = document.getElementById('cart-items-list');
             if (!container) return;
@@ -442,130 +787,6 @@
 
             if (!temItens) {
                 container.innerHTML = `<p class="text-center py-8 text-neutral-400 font-light text-xs">Sua sacola de curadorias está vazia.</p>`;
-            }
-        }
-
-        function enviarPedido() {
-            const nome = document.getElementById('client-name').value.trim();
-            const tel = document.getElementById('client-phone').value.trim();
-            const end = document.getElementById('client-address').value.trim();
-
-            if (!nome || !tel) {
-                alert("Por favor, preencha seu nome e telefone para contato.");
-                return;
-            }
-
-            let temItens = false;
-            let msg = `Olá! Gostaria de fazer um pedido na *LariAcessórios*:\n\n`;
-
-            for (const id in cart) {
-                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-                if (prod) {
-                    temItens = true;
-                    msg += `🔹 *${prod.nome}* (${cart[id]}x) — R$ ${(parseFloat(prod.preco) * cart[id]).toFixed(2)}\n`;
-                }
-            }
-
-            if (!temItens) {
-                alert("Sua sacola está vazia.");
-                return;
-            }
-
-            msg += `\n💰 *Total:* ${document.getElementById('modal-total-value').innerText}`;
-            msg += `\n\n📌 *Dados do Cliente:*`;
-            msg += `\n👤 *Nome:* ${nome}`;
-            msg += `\n📞 *Contato:* ${tel}`;
-            if (end) msg += `\n🏠 *Endereço/Retirada:* ${end}`;
-
-            const foneSuporte = "5591983050116"; 
-            window.open(`https://api.whatsapp.com/send?phone=${foneSuporte}&text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        // ==========================================
-        // FLUXO DE COMPORTAMENTO & SEGURANÇA ADMIN
-        // ==========================================
-        async function switchView(view) {
-            if (view === 'admin') {
-                // EXCLUSIVO: Dispara autenticação sob demanda ao tentar entrar no painel
-                const autorizado = await verificarAcessoAdminOnDemand();
-                if (!autorizado) return;
-
-                document.getElementById('view-client').classList.add('hidden');
-                document.getElementById('view-admin').classList.remove('hidden');
-                if (typeof carregarProdutosAdmin === 'function') carregarProdutosAdmin();
-            } else {
-                document.getElementById('view-admin').classList.add('hidden');
-                document.getElementById('view-client').classList.remove('hidden');
-            }
-        }
-
-        async function verificarAcessoAdminOnDemand() {
-            // Se já está logado, libera direto
-            if (localStorage.getItem('token_lari_admin')) {
-                return true;
-            }
-
-            const senha = prompt("Senha Administrativa LariAcessórios:");
-            if (!senha) return false; 
-
-            try {
-                const resposta = await fetch(`${API_BASE}/admin/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ senha: senha })
-                });
-
-                const dados = await resposta.json();
-
-                if (!resposta.ok) {
-                    alert(dados.erro || "Acesso Negado!");
-                    return false;
-                } else {
-                    localStorage.setItem('token_lari_admin', dados.token || "Bearer sessao_valida_lari_premium");
-                    return true;
-                }
-            } catch (erro) {
-                alert("Erro de conexão com o servidor da API.");
-                return false;
-            }
-        }
-
-        function logoutAdmin() {
-            localStorage.removeItem('token_lari_admin');
-            window.location.reload();
-        }
-
-        function limparFormulario() {
-            editingProduct = null;
-            selectedImageFile = null;
-
-            document.getElementById('prod-id').value = '';
-            document.getElementById('prod-nome').value = '';
-            document.getElementById('prod-preco').value = '';
-            document.getElementById('prod-categoria').selectedIndex = 0;
-            document.getElementById('prod-file').value = '';
-            document.getElementById('form-title').innerText = 'Curar Novo Acessório';
-            document.getElementById('btn-cancelar').classList.add('hidden');
-
-            document.getElementById('upload-placeholder-view').classList.remove('hidden');
-            const containerPreview = document.getElementById('upload-preview-container');
-            containerPreview.classList.add('hidden');
-            containerPreview.classList.remove('flex');
-            document.getElementById('upload-preview-img').src = '';
-        }
-
-        function processImageFile(input) {
-            if (input.files && input.files[0]) {
-                selectedImageFile = input.files[0];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('upload-placeholder-view').classList.add('hidden');
-                    const containerPreview = document.getElementById('upload-preview-container');
-                    containerPreview.classList.remove('hidden');
-                    containerPreview.classList.add('flex');
-                    document.getElementById('upload-preview-img').src = e.target.result;
-                }
-                reader.readAsDataURL(input.files[0]);
             }
         }
     </script>
