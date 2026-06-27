@@ -11,22 +11,21 @@ CORS(app)
 # =====================================================================
 # CONFIGURAÇÕES DE AMBIENTE (Painel Vercel)
 # =====================================================================
+# Alinhamento milimétrico com o seu painel de variáveis
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
-DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
-    "POSTGRES_URL_NON_POOLING"
-)
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+DATABASE_URL = os.environ.get("POSTGRES_URL")
 
 
 # =====================================================================
-# INFRAESTRUTURA DE BANCO DE DADOS (PostgreSQL)
+# INFRAESTRUTURA DE BANCO DE DADOS (PostgreSQL - Neon)
 # =====================================================================
 def obter_conexao():
     if not DATABASE_URL:
         raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
 
-    # Adiciona automaticamente o parâmetro de SSL caso seja um banco em nuvem (Neon, Render, etc)
     url_conexao = DATABASE_URL
+    # Força o uso de conexões seguras exigidas pelo Neon
     if "sslmode" not in url_conexao and "?" in url_conexao:
         url_conexao += "&sslmode=require"
     elif "sslmode" not in url_conexao:
@@ -42,6 +41,7 @@ def inicializar_infraestrutura_banco():
         try:
             conn = obter_conexao()
             cursor = conn.cursor()
+            # Garante a criação exata da tabela do catálogo
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS produtos (
                     id_produto TEXT PRIMARY KEY,
@@ -56,11 +56,10 @@ def inicializar_infraestrutura_banco():
             conn.close()
             print("Infraestrutura do banco de dados verificada/criada com sucesso.")
         except Exception as e:
-            # Blindagem: se o banco falhar na partida, o app não morre.
             print(f"Aviso importante: O banco de dados está inacessível no momento. Detalhes: {str(e)}")
 
 
-# Tenta inicializar sem travar o escopo global se houver timeout
+# Inicialização automática da tabela no deploy
 inicializar_infraestrutura_banco()
 
 
@@ -75,7 +74,7 @@ def efetuar_login_administrativo():
     if not ADMIN_PASSWORD:
         return jsonify({"auth": False, "error": "Senha mestra não configurada no servidor."}), 500
 
-    if str(senha_digitada) == str(ADMIN_PASSWORD):
+    if str(senha_digitada).strip() == str(ADMIN_PASSWORD).strip():
         return jsonify({
             "auth": True,
             "token": "Bearer sessao_valida_lari_premium"
@@ -107,16 +106,15 @@ def realizar_upload_imagem():
         nome_arquivo = arquivo.filename
         conteudo_arquivo = arquivo.read()
 
-        # 1. URL correta dedicada ao Vercel Blob Storage
+        # URL de destino do arquivo na infraestrutura da Vercel
         url_blob = f"https://blob.vercel-storage.com/{nome_arquivo}"
         
-        # 2. Cabeçalhos obrigatórios incluindo a versão da API
         headers_blob = {
             "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
             "x-api-version": "1"
         }
 
-        # 3. Envio usando PUT (enviando os bytes brutos do arquivo)
+        # Transmissão dos bytes puros via PUT
         resposta_vercel = requests.put(url_blob, headers=headers_blob, data=conteudo_arquivo)
 
         if resposta_vercel.status_code not in [200, 201]:
@@ -147,12 +145,14 @@ def gerenciar_catalogo_produtos():
         foto = dados.get("foto")
         visivel = dados.get("visivel", True)
 
-        if not id_produto or not nome or preco is None or not category or not foto:
+        # Validação milimétrica dos campos obrigatórios em português
+        if not id_produto or not nome or preco is None or not categoria or not foto:
             return jsonify({"error": "Preencha todos os campos obrigatórios."}), 400
 
         try:
             conn = obter_conexao()
             cursor = conn.cursor()
+            # Tratamento de conflito (UPSERT) para atualizar se o ID já existir
             cursor.execute("""
                 INSERT INTO produtos (id_produto, nome, preco, categoria, foto, visivel)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -160,14 +160,14 @@ def gerenciar_catalogo_produtos():
                 DO UPDATE SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
                               categoria = EXCLUDED.categoria, foto = EXCLUDED.foto, 
                               visivel = EXCLUDED.visivel;
-            """, (str(id_produto), str(nome), float(preco), str(categoria), str(foto), bool(visivel)))
+            """, (str(id_produto).strip(), str(nome).strip(), float(preco), str(categoria).strip(), str(foto).strip(), bool(visivel)))
             cursor.close()
             conn.close()
             return jsonify({"status": "success", "message": "Produto salvo com sucesso."}), 200
         except Exception as e:
             return jsonify({"error": f"Erro ao salvar no banco: {str(e)}"}), 500
 
-    # Método GET
+    # Chamada GET: Retorna a lista completa do catálogo em formato JSON estável
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
@@ -203,7 +203,7 @@ def remover_produto_banco(id_prod):
 
 
 # =====================================================================
-# FALLBACK: Rota residual
+# FALLBACK: Captura de rotas residuais
 # =====================================================================
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
