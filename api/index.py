@@ -14,7 +14,8 @@ CORS(app)
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSOWORD")
 DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or os.environ.get(
-    "POSTGRES_URL_NON_POOLING")
+    "POSTGRES_URL_NON_POOLING"
+)
 
 
 # =====================================================================
@@ -146,7 +147,7 @@ def gerenciar_catalogo_produtos():
         foto = dados.get("foto")
         visivel = dados.get("visivel", True)
 
-        if not id_produto or not nome or preco is None or not categoria or not foto:
+        if not id_produto or not nome or preco is None or not category or not foto:
             return jsonify({"error": "Preencha todos os campos obrigatórios."}), 400
 
         try:
