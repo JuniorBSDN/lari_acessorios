@@ -106,12 +106,19 @@ def realizar_upload_imagem():
         nome_arquivo = arquivo.filename
         conteudo_arquivo = arquivo.read()
 
-        url_blob = f"https://api.vercel.com/v1/blob/upload?filename={nome_arquivo}"
-        headers_blob = {"Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}"}
+        # 1. URL correta dedicada ao Vercel Blob Storage
+        url_blob = f"https://blob.vercel-storage.com/{nome_arquivo}"
+        
+        # 2. Cabeçalhos obrigatórios incluindo a versão da API
+        headers_blob = {
+            "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
+            "x-api-version": "1"
+        }
 
-        resposta_vercel = requests.post(url_blob, headers=headers_blob, data=conteudo_arquivo)
+        # 3. Envio usando PUT (enviando os bytes brutos do arquivo)
+        resposta_vercel = requests.put(url_blob, headers=headers_blob, data=conteudo_arquivo)
 
-        if resposta_vercel.status_code != 200:
+        if resposta_vercel.status_code not in [200, 201]:
             return jsonify({"error": f"Vercel Blob rejeitou o upload: {resposta_vercel.text}"}), 500
 
         dados_resposta = resposta_vercel.json()
