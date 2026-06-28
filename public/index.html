@@ -301,9 +301,21 @@
             grid.innerHTML = '';
 
             const produtosFiltrados = datasetProducts.filter(p => {
-                const matchesCategory = (currentCategory === 'todos' || p.categoria === currentCategory);
-                const matchesSearch = p.nome.toLowerCase().includes(currentSearchQuery.toLowerCase());
+                // Força a conversão para string estável e remove espaços extras das pontas
+                const categoriaProduto = String(p.categoria || '').trim().toLowerCase();
+                const categoriaSelecionada = String(currentCategory || 'todos').trim().toLowerCase();
+                
+                // 1. Filtro de Categoria blindado contra caixa alta/baixa ou espaços
+                const matchesCategory = (categoriaSelecionada === 'todos' || categoriaProduto === categoriaSelecionada);
+                
+                // 2. Filtro de Busca blindado contra valores nulos/undefined do banco
+                const nomeProduto = String(p.nome || '').toLowerCase();
+                const termoBusca = String(currentSearchQuery || '').toLowerCase().trim();
+                const matchesSearch = nomeProduto.includes(termoBusca);
+                
+                // 3. Filtro de Visibilidade
                 const isVisible = p.visivel !== false;
+                
                 return matchesCategory && matchesSearch && isVisible;
             });
 
@@ -319,7 +331,7 @@
             produtosFiltrados.forEach(p => {
                 // Checa se o produto está com visivel em formato de string ou boolean de vendido
                 const esgotado = (p.visivel === 'vendido' || p.visivel === false && p.status === 'vendido');
-                
+
                 grid.innerHTML += `
                     <div class="group bg-white border border-neutral-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between ${esgotado ? 'opacity-60' : ''}">
                         <div class="relative overflow-hidden aspect-square bg-neutral-50">
@@ -350,7 +362,6 @@
                 `;
             });
         }
-
         // CONTROLADORES DE FILTRO & BUSCA
         function filterCategory(cat) {
             currentCategory = cat;
