@@ -315,21 +315,33 @@
             }
 
             produtosFiltrados.forEach(p => {
+                // Checa se o produto está com visivel em formato de string ou boolean de vendido
+                const esgotado = (p.visivel === 'vendido' || p.visivel === false && p.status === 'vendido');
+                
                 grid.innerHTML += `
-                    <div class="group bg-white border border-neutral-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between">
+                    <div class="group bg-white border border-neutral-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between ${esgotado ? 'opacity-60' : ''}">
                         <div class="relative overflow-hidden aspect-square bg-neutral-50">
                             <img src="${p.foto}" alt="${p.nome}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             <span class="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase text-neutral-600 border border-neutral-200/40">${p.categoria}</span>
+                            ${esgotado ? `
+                                <div class="absolute inset-0 bg-black/5 flex items-center justify-center">
+                                    <span class="bg-red-600 text-white text-[10px] font-bold tracking-widest uppercase px-3 py-1.5 rounded-md shadow-md">Estoque Esgotado</span>
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
                             <div>
-                                <h4 class="font-medium text-neutral-900 text-sm line-clamp-2 leading-tight">${p.nome}</h4>
+                                <h4 class="font-medium text-neutral-900 text-sm line-clamp-2 leading-tight ${esgotado ? 'line-through text-neutral-400' : ''}">${p.nome}</h4>
                             </div>
                             <div class="pt-1 flex items-center justify-between gap-2">
                                 <span class="font-luxury text-base font-bold text-neutral-900">${Number(p.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                                <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="bg-neutral-50 border border-neutral-200 hover:bg-black hover:text-white text-neutral-700 p-2 rounded-xl transition-colors flex items-center justify-center shrink-0">
-                                    <span class="material-symbols-rounded text-xl">add_shopping_cart</span>
-                                </button>
+                                ${esgotado ? `
+                                    <span class="text-xs font-semibold text-red-500 uppercase tracking-wider pr-1">Esgotado</span>
+                                ` : `
+                                    <button onclick="adicionarAoCarrinho('${p.id_produto}')" class="bg-neutral-50 border border-neutral-200 hover:bg-black hover:text-white text-neutral-700 p-2 rounded-xl transition-colors flex items-center justify-center shrink-0">
+                                        <span class="material-symbols-rounded text-xl">add_shopping_cart</span>
+                                    </button>
+                                `}
                             </div>
                         </div>
                     </div>
@@ -404,11 +416,96 @@
             renderizarItensCarrinhoModal();
         }
 
+        function renderizarItensCarrinhoModal() {
+            const container = document.getElementById('cart-items-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let vazio = true;
+
+            for (const id in cart) {
+                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+                if (prod) {
+                    vazio = false;
+                    container.innerHTML += `
+                        <div class="flex items-center justify-between py-3 gap-3">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <img src="${prod.foto}" class="w-12 h-12 object-cover rounded-xl border border-neutral-100 shrink-0">
+                                <div class="overflow-hidden">
+                                    <h5 class="text-xs font-semibold text-neutral-900 truncate max-w-[160px]">${prod.nome}</h5>
+                                    <p class="text-[11px] text-neutral-400 font-luxury font-bold">${Number(prod.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center border border-neutral-200 rounded-lg p-1 gap-2 bg-neutral-50 shrink-0">
+                                <button onclick="alterarQuantidadeCarrinho('${id}', -1)" class="w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-neutral-200 rounded">-</button>
+                                <span class="text-xs font-semibold px-1">${cart[id]}</span>
+                                <button onclick="alterarQuantidadeCarrinho('${id}', 1)" class="w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-neutral-200 rounded">+</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            if (vazio) {
+                container.innerHTML = `<p class="text-center text-xs text-neutral-400 py-8">Sua sacola está vazia.</p>`;
+            }
+        }
+
         function toggleCheckoutModal() {
             const modal = document.getElementById('checkout-modal');
             modal.classList.toggle('hidden');
         }
 
+        // ==========================================
+        // DISPARO E INTEGRACAO MILIMETRICA COM WHATSAPP
+        // ==========================================
+function enviarPedido() {
+    const nome = document.getElementById('client-name').value.trim();
+    const endereco = document.getElementById('client-address').value.trim();
+
+    if (!nome || !endereco) {
+        alert("Por favor, preencha o seu nome e endereço de entrega.");
+        return;
+    }
+
+    let textoItens = '';
+    let index = 1;
+
+    for (const id in cart) {
+        const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+        if (prod) {
+            textoItens += `${index}. ${prod.nome} (x${cart[id]})\n`;
+            index++;
+        }
+    }
+
+    if (!textoItens) {
+        alert("Nenhum item válido encontrado no carrinho.");
+        return;
+    }
+
+    const mensagemWhatsApp = `Olá Lari, gostaria de fazer o seguinte pedido:\n\n` +
+                             `*📦 PRODUTO(S):*\n${textoItens}\n` +
+                             `*👤 CLIENTE:* ${nome}\n` +
+                             `*📍 ENDEREÇO:* ${endereco}`;
+
+    const numeroDestino = "5591982005830"; 
+    const linkFinal = `https://api.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(mensagemWhatsApp)}`;
+    
+    // 1. Abre o WhatsApp em nova aba
+    window.open(linkFinal, '_blank');
+
+    // 2. Limpa o carrinho de compras interno
+    cart = {};
+
+    // 3. Reseta os campos de texto do formulário
+    document.getElementById('client-name').value = '';
+    document.getElementById('client-address').value = '';
+
+    // 4. Atualiza a interface (fecha o modal e zera os contadores de itens)
+    atualizarEstadoCarrinho();
+    toggleCheckoutModal();
+}
         // ==========================================
         // FLUXO DE COMPORTAMENTO & SEGURANÇA ADMIN
         // ==========================================
@@ -461,9 +558,6 @@
             switchView('client');
         }
 
-        // ==========================================
-        // PROCESSAMENTO DE ARQUIVOS E PREVIEW
-        // ==========================================
         function processImageFile(input) {
             if (input.files && input.files[0]) {
                 selectedImageFile = input.files[0];
@@ -478,16 +572,20 @@
             }
         }
 
-        // ==========================================
-        // GERENCIAMENTO DO ACERVO (CRUD)
-        // ==========================================
         async function carregarProdutosAdmin() {
             try {
-                const resposta = await fetch(`${API_BASE}/produtos`);
+                const token = localStorage.getItem('token_lari_admin');
+                const resposta = await fetch(`${API_BASE}/produtos`, {
+                    headers: { 'Authorization': token }
+                });
                 datasetProducts = await resposta.json();
 
                 let totalAcervo = 0;
-                datasetProducts.forEach(p => totalAcervo += parseFloat(p.preco));
+                datasetProducts.forEach(p => {
+                    if (p.visivel !== 'vendido') {
+                        totalAcervo += parseFloat(p.preco);
+                    }
+                });
 
                 document.getElementById('dash-faturamento').innerText = totalAcervo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 document.getElementById('dash-pedidos').innerText = datasetProducts.length;
@@ -504,27 +602,37 @@
             tbody.innerHTML = '';
 
             datasetProducts.forEach(p => {
-                const visivel = p.visivel !== false;
+                const statusAtual = p.visivel; // true, false ou 'vendido'
+                
                 tbody.innerHTML += `
                     <tr class="border-b border-neutral-100 hover:bg-neutral-50/80 transition-colors">
                         <td class="py-4 flex items-center gap-3 font-medium text-neutral-900">
                             <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-200">
-                            <span class="truncate max-w-[180px] font-semibold">${p.nome}</span>
+                            <span class="truncate max-w-[180px] font-semibold ${statusAtual === 'vendido' ? 'line-through text-neutral-400' : ''}">${p.nome}</span>
                         </td>
                         <td class="py-4 uppercase tracking-wider text-[10px] text-neutral-500">${p.categoria}</td>
                         <td class="py-4 font-luxury font-bold">${Number(p.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                         <td class="py-4 text-center">
-                            <button onclick="toggleVisibilidadeProduto('${p.id_produto}', ${visivel})" class="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
-                                <span class="material-symbols-rounded text-base ${visivel ? 'text-emerald-600' : 'text-neutral-400'}">
-                                    ${visivel ? 'visibility' : 'visibility_off'}
-                                </span>
-                            </button>
+                            ${statusAtual === 'vendido' ? `
+                                <span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md uppercase">Vendido</span>
+                            ` : `
+                                <button onclick="toggleVisibilidadeProduto('${p.id_produto}', ${statusAtual})" class="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
+                                    <span class="material-symbols-rounded text-base ${statusAtual ? 'text-emerald-600' : 'text-neutral-400'}">
+                                        ${statusAtual ? 'visibility' : 'visibility_off'}
+                                    </span>
+                                </button>
+                            `}
                         </td>
-                        <td class="py-4 text-right space-x-1">
-                            <button onclick="editarProduto('${p.id_produto}')" class="p-1.5 rounded-lg text-neutral-500 hover:text-black hover:bg-neutral-100 transition-all">
-                                <span class="material-symbols-rounded text-base">edit</span>
-                            </button>
-                            <button onclick="deletarProduto('${p.id_produto}')" class="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-all">
+                        <td class="py-4 text-right space-x-2">
+                            ${statusAtual !== 'vendido' ? `
+                                <button onclick="marcarComoVendido('${p.id_produto}')" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded-md font-bold uppercase text-[10px] tracking-wider transition-all border border-emerald-200" title="Marcar como esgotado">
+                                    Vendido
+                                </button>
+                                <button onclick="prepararEdicaoCompleta('${p.id_produto}')" class="p-1 text-neutral-500 hover:text-black" title="Editar">
+                                    <span class="material-symbols-rounded text-base">edit</span>
+                                </button>
+                            ` : ''}
+                            <button onclick="excluirProdutoCompleto('${p.id_produto}')" class="p-1 text-red-500 hover:text-red-700" title="Excluir">
                                 <span class="material-symbols-rounded text-base">delete</span>
                             </button>
                         </td>
@@ -533,212 +641,181 @@
             });
         }
 
-// 1. SALVAR / EDITAR PRODUTO
-async function salvarProdutoCompleto() {
-    const id = document.getElementById('prod-id').value;
-    const nome = document.getElementById('prod-nome').value.trim();
-    const preco = document.getElementById('prod-preco').value.trim();
-    const categoria = document.getElementById('prod-categoria').value;
+        // ==========================================
+        // ACOES INTEGRADAS DO BACKEND (ALTERAR/EXCLUIR/VENDIDO)
+        // ==========================================
+        async function marcarComoVendido(id) {
+            if (!confirm("Confirmar a venda deste acessório e esgotar o estoque na vitrine?")) return;
+            try {
+                const token = localStorage.getItem('token_lari_admin');
+                const produto = datasetProducts.find(p => p.id_produto === id);
+                if (!produto) return;
 
-    let token = localStorage.getItem('token_lari_admin');
-    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+                // Atualiza o campo visivel para 'vendido' mantendo a integridade no banco PostgreSQL
+                const payload = {
+                    id_produto: produto.id_produto,
+                    nome: produto.nome,
+                    preco: produto.preco,
+                    categoria: produto.categoria,
+                    foto: produto.foto,
+                    visivel: "vendido"
+                };
 
-    if (!nome || !preco) {
-        alert("Por favor, preencha todos os campos fundamentais.");
-        return;
-    }
+                const resposta = await fetch(`${API_BASE}/produtos`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': token 
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-    let urlFotoFinal = editingProduct ? editingProduct.foto : '';
-
-    if (selectedImageFile) {
-        const formData = new FormData();
-        formData.append('foto', selectedImageFile);
-
-        try {
-            const uploadRes = await fetch(`${API_BASE}/upload`, {
-                method: 'POST',
-                headers: { 'Authorization': token },
-                body: formData
-            });
-
-            const uploadDados = await uploadRes.json();
-            if (!uploadRes.ok) throw new Error(uploadDados.error || "Falha ao processar arquivo.");
-            urlFotoFinal = uploadDados.url;
-        } catch (err) {
-            alert("Erro no upload da imagem: " + err.message);
-            return;
+                if (resposta.ok) {
+                    carregarProdutosAdmin();
+                } else {
+                    alert("Falha ao computar venda no servidor.");
+                }
+            } catch (err) {
+                console.error("Erro ao marcar venda:", err);
+            }
         }
-    }
 
-    if (!urlFotoFinal) {
-        alert("É necessário definir uma imagem para o acessório.");
-        return;
-    }
+        async function toggleVisibilidadeProduto(id, estadoAtual) {
+            try {
+                const token = localStorage.getItem('token_lari_admin');
+                const produto = datasetProducts.find(p => p.id_produto === id);
+                if (!produto) return;
 
-    const payload = {
-        id_produto: id || crypto.randomUUID(),
-        nome: nome,
-        preco: parseFloat(preco),
-        categoria: categoria,
-        foto: urlFotoFinal,
-        visivel: true
-    };
+                const payload = {
+                    id_produto: produto.id_produto,
+                    nome: produto.nome,
+                    preco: produto.preco,
+                    categoria: produto.categoria,
+                    foto: produto.foto,
+                    visivel: !estadoAtual
+                };
 
-    try {
-        const res = await fetch(`${API_BASE}/produtos`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify(payload)
-        });
+                await fetch(`${API_BASE}/produtos`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': token 
+                    },
+                    body: JSON.stringify(payload)
+                });
+                carregarProdutosAdmin();
+            } catch (err) {
+                console.error("Erro ao alterar visibilidade:", err);
+            }
+        }
 
-        const respostaDados = await res.json();
-        if (!res.ok) throw new Error(respostaDados.error || "Erro ao salvar no banco.");
+        function prepararEdicaoCompleta(id) {
+            const p = datasetProducts.find(prod => prod.id_produto === id);
+            if (!p) return;
 
-        alert("Acervo atualizado com sucesso!");
-        limparFormulario();
-        carregarProdutosAdmin();
-        carregarProdutosVitrine();
-    } catch (erro) {
-        alert("Falha no fluxo: " + erro.message);
-    }
-}
+            editingProduct = p;
+            document.getElementById('prod-id').value = p.id_produto;
+            document.getElementById('prod-nome').value = p.nome;
+            document.getElementById('prod-preco').value = p.preco;
+            document.getElementById('prod-categoria').value = p.categoria;
 
-// 2. EXCLUIR PRODUTO PERMANENTEMENTE
-async function deletarProduto(id) {
-    if (!confirm("Tem certeza que deseja remover este item permanentemente do acervo?")) return;
-    let token = localStorage.getItem('token_lari_admin');
-    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
-
-    try {
-        const res = await fetch(`${API_BASE}/produtos/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': token }
-        });
-
-        const dados = await res.json();
-        if (!res.ok) throw new Error(dados.error || "Erro na exclusão.");
-
-        alert("Item removido do acervo.");
-        carregarProdutosAdmin();
-        carregarProdutosVitrine();
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-// 3. ALTERAR VISIBILIDADE (OCULTAR / MOSTRAR)
-async function toggleVisibilidadeProduto(id, statusAtual) {
-    let token = localStorage.getItem('token_lari_admin');
-    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
-
-    const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-    if (!prod) return;
-
-    const payload = {
-        id_produto: prod.id_produto,
-        nome: prod.nome,
-        preco: parseFloat(prod.preco),
-        categoria: prod.categoria,
-        foto: prod.foto,
-        visivel: !statusAtual
-    };
-
-    try {
-        const res = await fetch(`${API_BASE}/produtos`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const dados = await res.json();
-        if (!res.ok) throw new Error(dados.error || "Erro ao mudar visibilidade.");
-
-        carregarProdutosAdmin();
-        carregarProdutosVitrine();
-    } catch (err) {
-        alert(err.message);
-    }
-}
-        function editarProduto(id) {
-            const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-            if (!prod) return;
-
-            editingProduct = prod;
-            document.getElementById('prod-id').value = prod.id_produto;
-            document.getElementById('prod-nome').value = prod.nome;
-            document.getElementById('prod-preco').value = prod.preco;
-            document.getElementById('prod-categoria').value = prod.categoria;
-
-            document.getElementById('upload-preview-img').src = prod.foto;
+            document.getElementById('upload-preview-img').src = p.foto;
             document.getElementById('upload-placeholder-view').classList.add('hidden');
             document.getElementById('upload-preview-container').classList.remove('hidden');
 
-            document.getElementById('form-title').innerText = "Editar Acessório";
+            document.getElementById('form-title').innerText = "Alterar Acessório";
             document.getElementById('btn-cancelar').classList.remove('hidden');
         }
 
-        async function deletarProduto(id) {
-            if (!confirm("Tem certeza que deseja remover este item permanentemente do acervo?")) return;
-            let token = localStorage.getItem('token_lari_admin');
-            if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
+        async function salvarProdutoCompleto() {
+            const id = document.getElementById('prod-id').value;
+            const nome = document.getElementById('prod-nome').value.trim();
+            const preco = document.getElementById('prod-preco').value;
+            const categoria = document.getElementById('prod-categoria').value;
+            const token = localStorage.getItem('token_lari_admin');
+
+            if (!nome || !preco || !categoria) {
+                alert("Preencha todos os campos do formulário.");
+                return;
+            }
+
+            let urlFoto = editingProduct ? editingProduct.foto : '';
 
             try {
-                const res = await fetch(`${API_BASE}/produtos/${id}`, {
+                // Se o usuário selecionou uma nova foto, faz o upload primeiro
+                if (selectedImageFile) {
+                    const formData = new FormData();
+                    formData.append('foto', selectedImageFile);
+
+                    const resUpload = await fetch(`${API_BASE}/upload`, {
+                        method: 'POST',
+                        headers: { 'Authorization': token },
+                        body: formData
+                    });
+                    const dadosUpload = await resUpload.json();
+                    if (resUpload.ok) {
+                        urlFoto = dadosUpload.url;
+                    } else {
+                        alert("Erro no upload da imagem: " + dadosUpload.error);
+                        return;
+                    }
+                }
+
+                if (!urlFoto) {
+                    alert("Selecione uma imagem para o acessório.");
+                    return;
+                }
+
+                const payload = {
+                    id_produto: id || "prod_" + Date.now(),
+                    nome: nome,
+                    preco: parseFloat(preco),
+                    categoria: categoria,
+                    foto: urlFoto,
+                    visivel: editingProduct ? editingProduct.visivel : true
+                };
+
+                const resSalvar = await fetch(`${API_BASE}/produtos`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (resSalvar.ok) {
+                    limparFormulario();
+                    carregarProdutosAdmin();
+                    alert("Acessório salvo com sucesso no acervo!");
+                } else {
+                    const err = await resSalvar.json();
+                    alert("Erro ao salvar: " + err.error);
+                }
+            } catch (err) {
+                console.error("Erro no fluxo de salvamento:", err);
+            }
+        }
+
+        async function excluirProdutoCompleto(id) {
+            if (!confirm("Tem certeza que deseja remover este acessório do catálogo definitivamente?")) return;
+            try {
+                const token = localStorage.getItem('token_lari_admin');
+                const resposta = await fetch(`${API_BASE}/produtos/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': token }
                 });
 
-                if (!res.ok) throw new Error("Erro na exclusão.");
-
-                alert("Item removido do acervo.");
-                carregarProdutosAdmin();
-                carregarProdutosVitrine();
+                if (resposta.ok) {
+                    carregarProdutosAdmin();
+                    alert("Item excluído com sucesso.");
+                } else {
+                    alert("Erro ao excluir do servidor.");
+                }
             } catch (err) {
-                alert(err.message);
+                console.error("Erro ao deletar:", err);
             }
         }
-
-        async function toggleVisibilidadeProduto(id, statusAtual) {
-    let token = localStorage.getItem('token_lari_admin');
-    if (token && !token.startsWith('Bearer ')) token = `Bearer ${token}`;
-
-    // Encontra o produto atual no teu dataset para não perder os dados dele
-    const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-    if (!prod) return;
-
-    // Monta o payload com todos os campos que o Python exige, invertendo apenas a visibilidade
-    const payload = {
-        id_produto: prod.id_produto,
-        nome: prod.nome,
-        preco: parseFloat(prod.preco),
-        categoria: prod.categoria,
-        foto: prod.foto,
-        visivel: !statusAtual
-    };
-
-    try {
-        const res = await fetch(`${API_BASE}/produtos`, {
-            method: 'POST', // Alinhado com a rota do Python
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) throw new Error("Erro ao mudar visibilidade.");
-        carregarProdutosAdmin();
-        carregarProdutosVitrine();
-    } catch (err) {
-        alert(err.message);
-    }
-}
 
         function limparFormulario() {
             editingProduct = null;
@@ -746,48 +823,14 @@ async function toggleVisibilidadeProduto(id, statusAtual) {
             document.getElementById('prod-id').value = '';
             document.getElementById('prod-nome').value = '';
             document.getElementById('prod-preco').value = '';
-            document.getElementById('prod-categoria').value = 'relogios';
             document.getElementById('prod-file').value = '';
-
+            
             document.getElementById('upload-placeholder-view').classList.remove('hidden');
             document.getElementById('upload-preview-container').classList.add('hidden');
             document.getElementById('upload-preview-img').src = '';
 
             document.getElementById('form-title').innerText = "Curar Novo Acessório";
             document.getElementById('btn-cancelar').classList.add('hidden');
-        }
-
-        function renderizarItensCarrinhoModal() {
-            const container = document.getElementById('cart-items-list');
-            if (!container) return;
-            container.innerHTML = '';
-
-            let temItens = false;
-
-            for (const id in cart) {
-                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-                if (prod) {
-                    temItens = true;
-                    container.innerHTML += `
-                        <div class="flex items-center gap-4 py-3">
-                            <img src="${prod.foto}" class="w-16 h-16 rounded-xl object-cover border border-neutral-100 shrink-0">
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-medium text-xs text-neutral-900 truncate">${prod.nome}</h4>
-                                <p class="text-neutral-400 text-[11px] mt-0.5">${Number(prod.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                            </div>
-                            <div class="flex items-center border border-neutral-200 rounded-lg overflow-hidden bg-neutral-50 shrink-0">
-                                <button onclick="alterarQuantidadeCarrinho('${id}', -1)" class="px-2 py-1 hover:bg-neutral-200 text-neutral-600 text-xs font-bold">-</button>
-                                <span class="px-2 text-xs font-semibold text-neutral-800">${cart[id]}</span>
-                                <button onclick="alterarQuantidadeCarrinho('${id}', 1)" class="px-2 py-1 hover:bg-neutral-200 text-neutral-600 text-xs font-bold">+</button>
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-
-            if (!temItens) {
-                container.innerHTML = `<p class="text-center py-8 text-neutral-400 font-light text-xs">Sua sacola de curadorias está vazia.</p>`;
-            }
         }
     </script>
 </body>
