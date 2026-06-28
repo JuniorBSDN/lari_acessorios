@@ -288,7 +288,7 @@
         let currentCategory = 'todos';
         let currentSearchQuery = '';
         let editingProduct = null;
-        let selectedImageFile = null;
+        let selectedImageFiles = [];
 
         // INICIALIZAÇÃO AUTOMÁTICA DA VITRINE PÚBLICA
         window.addEventListener('DOMContentLoaded', carregarProdutosVitrine);
@@ -732,80 +732,60 @@ async function toggleVisibilidadeProduto(id, estadoAtual) {
        // ==========================================
         // FLUXO DE COMPORTAMENTO & SALVAMENTO MULTI-IMAGEM ADMIN
         // ==========================================
-        async function salvarProdutoCompleto(e) {
-            if (e && typeof e.preventDefault === 'function') {
-                e.preventDefault();
-            }
+       async function salvarProdutoCompleto(e) {
+    if (e) e.preventDefault();
 
-            const id = document.getElementById('prod-id').value;
-            const nome = document.getElementById('prod-nome').value.trim();
-            const preco = document.getElementById('prod-preco').value;
-            const categoria = document.getElementById('prod-categoria').value;
-            const token = localStorage.getItem('token_lari_admin');
+    const id = document.getElementById('prod-id').value || 'prod_' + Date.now();
+    const nome = document.getElementById('prod-nome').value;
+    const preco = document.getElementById('prod-preco').value;
+    const categoria = document.getElementById('prod-categoria').value;
+    const token = localStorage.getItem('token_lari_admin');
 
-            if (!nome || !preco || !categoria) {
-                alert("Preencha todos os campos do formulário.");
-                return;
-            }
+    if (!nome || !preco || !categoria) {
+        alert("Por favor, preencha todos os campos estruturais.");
+        return;
+    }
 
-            // Desabilita o botão que disparou o evento para evitar duplo clique
-            const btn = e && e.target ? e.target : null;
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = "SALVANDO...";
-            }
+    const formData = new FormData();
+    formData.append('id_produto', id);
+    formData.append('nome', nome);
+    formData.append('preco', preco);
+    formData.append('categoria', categoria);
 
-            // Criamos um FormData para enviar os arquivos brutos e dados juntos
-            const formData = new FormData();
-            formData.append('id_produto', id || "prod_" + Date.now());
-            formData.append('nome', nome);
-            formData.append('preco', parseFloat(preco));
-            formData.append('categoria', categoria);
-            formData.append('visivel', editingProduct ? editingProduct.visivel : true);
+    if (editingProduct) {
+        formData.append('foto_antiga', editingProduct.foto);
+        formData.append('visivel', editingProduct.visivel);
+    } else {
+        formData.append('visivel', 'true');
+    }
 
-            if (editingProduct && editingProduct.foto) {
-                formData.append('foto_antiga', editingProduct.foto);
-            }
+    // Percorre o array e adiciona múltiplos ficheiros na chave 'foto'
+    if (selectedImageFiles.length > 0) {
+        selectedImageFiles.forEach(file => {
+            formData.append('foto', file);
+        });
+    }
 
-            // Captura o input de múltiplos ficheiros
-            const fileInput = document.getElementById('prod-file');
-            if (fileInput && fileInput.files.length > 0) {
-                // Anexa todas as imagens na mesma chave 'foto'
-                for (let i = 0; i < fileInput.files.length; i++) {
-                    formData.append('foto', fileInput.files[i]);
-                }
-            }
+    try {
+        const resposta = await fetch(`${API_BASE}/produtos`, {
+            method: 'POST',
+            headers: { 'Authorization': token },
+            body: formData
+        });
 
-            try {
-                const resposta = await fetch(`${API_BASE}/produtos`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': token
-                        // NOTA: O browser define o Content-Type e o boundary do FormData sozinho!
-                    },
-                    body: formData
-                });
-
-                const resultado = await resposta.json();
-
-                if (resposta.ok) {
-                    limparFormulario();
-                    await carregarProdutosAdmin(); // Atualiza a tabela do painel
-                    alert("Acessório e imagens salvos com sucesso!");
-                } else {
-                    alert(resultado.error || resultado.erro || "Erro ao guardar o produto.");
-                }
-            } catch (err) {
-                console.error("Erro na persistência do produto:", err);
-                alert("Falha de comunicação com o servidor.");
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerText = "SALVAR COLEÇÃO";
-                }
-            }
+        if (resposta.ok) {
+            alert("Coleção atualizada com sucesso!");
+            limparFormulario();
+            carregarProdutosAdmin();
+        } else {
+            const errData = await resposta.json();
+            alert(`Erro do Servidor: ${errData.error || 'Falha no salvamento.'}`);
         }
-
+    } catch (err) {
+        console.error("Erro na requisição de salvamento:", err);
+        alert("Erro de conectividade com o servidor serverless.");
+    }
+}
         async function excluirProdutoCompleto(id) {
             if (!confirm("Tem certeza que deseja remover este acessório do catálogo definitivamente?")) return;
             try {
@@ -827,24 +807,22 @@ async function toggleVisibilidadeProduto(id, estadoAtual) {
         }
 
         function limparFormulario() {
-            editingProduct = null;
-            selectedImageFile = null;
-            document.getElementById('prod-id').value = '';
-            document.getElementById('prod-nome').value = '';
-            document.getElementById('prod-preco').value = '';
-            document.getElementById('prod-file').value = '';
+    editingProduct = null;
+    selectedImageFiles = []; // Esvazia o array de múltiplos ficheiros
+    document.getElementById('prod-id').value = '';
+    document.getElementById('prod-nome').value = '';
+    document.getElementById('prod-preco').value = '';
+    document.getElementById('prod-file').value = '';
 
-            document.getElementById('upload-placeholder-view').classList.remove('hidden');
-            document.getElementById('upload-preview-container').classList.add('hidden');
-            document.getElementById('upload-preview-img').src = '';
+    document.getElementById('upload-placeholder-view').classList.remove('hidden');
 
-            document.getElementById('form-title').innerText = "Curar Novo Acessório";
-            document.getElementById('btn-cancelar').classList.add('hidden');
-        }
+    const containerPreview = document.getElementById('upload-preview-container');
+    containerPreview.classList.add('hidden');
+    containerPreview.innerHTML = ''; // Limpa os elementos criados dinamicamente
 
-        // Variáveis globais para controlo do Carrossel Fullscreen
-        let fotosSlideAtual = [];
-        let indexSlideAtual = 0;
+    document.getElementById('form-title').innerText = "Curar Novo Acessório";
+    document.getElementById('btn-cancelar').classList.add('hidden');
+}
 
         function abrirModalProduto(id) {
             const p = datasetProducts.find(prod => String(prod.id_produto) === String(id));
@@ -919,37 +897,42 @@ async function toggleVisibilidadeProduto(id, estadoAtual) {
         });
         function manipularSelecaoImagem(event) {
     const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Converte a FileList num Array e armazena na variável global
+    selectedImageFiles = Array.from(files);
+
+    const containerPreview = document.getElementById('upload-preview-container');
     const placeholder = document.getElementById('upload-placeholder-view');
-    const previewContainer = document.getElementById('upload-preview-container');
 
-    // Se o seu HTML tiver uma tag <img> fixa para preview, podemos transformá-la ou limpá-la
-    // Para listar múltiplas imagens no preview do Admin:
-    if (files && files.length > 0) {
-        if (placeholder) placeholder.classList.add('hidden');
-        if (previewContainer) {
-            previewContainer.classList.remove('hidden');
+    // Limpa previews anteriores se existirem
+    containerPreview.innerHTML = '';
 
-            // Limpa previews anteriores e renderiza as miniaturas de tudo o que foi selecionado
-            previewContainer.innerHTML = '';
+    // Cria uma mini-galeria de miniaturas no painel do admin
+    const wrapper = document.createElement('div');
+    wrapper.className = "flex flex-wrap gap-2 justify-center";
 
-            Array.from(files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = "w-16 h-16 object-cover rounded-lg border border-neutral-200 shadow-sm animate-fade-in";
-                    previewContainer.appendChild(img);
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-    } else {
-        if (placeholder) placeholder.classList.remove('hidden');
-        if (previewContainer) {
-            previewContainer.classList.add('hidden');
-            previewContainer.innerHTML = '';
-        }
-    }
+    selectedImageFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = "w-14 h-14 object-cover rounded-md border border-neutral-200 shadow-sm animate-fade-in";
+            wrapper.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Adiciona o indicador textual abaixo das miniaturas
+    const label = document.createElement('span');
+    label.className = "text-[9px] text-neutral-400 uppercase bg-neutral-200/60 px-2 py-0.5 rounded-full font-bold block text-center mt-1";
+    label.innerText = `${selectedImageFiles.length} Imagens Selecionadas`;
+
+    containerPreview.appendChild(wrapper);
+    containerPreview.appendChild(label);
+
+    placeholder.classList.add('hidden');
+    containerPreview.classList.remove('hidden');
 }
     </script>
 <div id="product-detail-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
