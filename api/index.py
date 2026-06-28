@@ -11,6 +11,7 @@ CORS(app)
 # =====================================================================
 # CONFIGURAÇÕES DE AMBIENTE (Painel Vercel)
 # =====================================================================
+# Alinhamento milimétrico com o seu painel de variáveis
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 DATABASE_URL = os.environ.get("POSTGRES_URL")
@@ -24,6 +25,7 @@ def obter_conexao():
         raise ValueError("A string de conexão (POSTGRES_URL) não foi configurada na Vercel.")
 
     url_conexao = DATABASE_URL
+    # Força o uso de conexões seguras exigidas pelo Neon
     if "sslmode" not in url_conexao and "?" in url_conexao:
         url_conexao += "&sslmode=require"
     elif "sslmode" not in url_conexao:
@@ -39,6 +41,7 @@ def inicializar_infraestrutura_banco():
         try:
             conn = obter_conexao()
             cursor = conn.cursor()
+            # Garante a criação exata da tabela do catálogo
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS produtos (
                     id_produto TEXT PRIMARY KEY,
@@ -56,6 +59,7 @@ def inicializar_infraestrutura_banco():
             print(f"Aviso importante: O banco de dados está inacessível no momento. Detalhes: {str(e)}")
 
 
+# Inicialização automática da tabela no deploy
 inicializar_infraestrutura_banco()
 
 
@@ -80,7 +84,51 @@ def efetuar_login_administrativo():
 
 
 # =====================================================================
-# ROTAS: Gerenciamento do Catálogo (Listagem e Persistência Multi-Imagem)
+# ROTA: Upload de Imagens (Vercel Blob Storage)
+# =====================================================================
+@app.route("/api/upload", methods=["POST"])
+def realizar_upload_imagem():
+    token_sessao = request.headers.get("Authorization")
+    if token_sessao != "Bearer sessao_valida_lari_premium":
+        return jsonify({"error": "Acesso não autorizado."}), 403
+
+    if "foto" not in request.files:
+        return jsonify({"error": "Nenhum arquivo de imagem foi enviado."}), 400
+
+    arquivo = request.files["foto"]
+    if arquivo.filename == "":
+        return jsonify({"error": "Arquivo sem nome válido."}), 400
+
+    if not VERCEL_BLOB_READ_WRITE_TOKEN:
+        return jsonify({"error": "Token do Vercel Blob não configurado."}), 500
+
+    try:
+        nome_arquivo = arquivo.filename
+        conteudo_arquivo = arquivo.read()
+
+        # URL de destino do arquivo na infraestrutura da Vercel
+        url_blob = f"https://blob.vercel-storage.com/{nome_arquivo}"
+
+        headers_blob = {
+            "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
+            "x-api-version": "1"
+        }
+
+        # Transmissão dos bytes puros via PUT
+        resposta_vercel = requests.put(url_blob, headers=headers_blob, data=conteudo_arquivo)
+
+        if resposta_vercel.status_code not in [200, 201]:
+            return jsonify({"error": f"Vercel Blob rejeitou o upload: {resposta_vercel.text}"}), 500
+
+        dados_resposta = resposta_vercel.json()
+        return jsonify({"url": dados_resposta.get("url")}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Falha no processo de upload: {str(e)}"}), 500
+
+
+# =====================================================================
+# ROTAS: Gerenciamento do Catálogo (Listagem e Persistência)
 # =====================================================================
 @app.route("/api/produtos", methods=["GET", "POST"])
 def gerenciar_catalogo_produtos():
@@ -89,88 +137,95 @@ def gerenciar_catalogo_produtos():
         if token_sessao != "Bearer sessao_valida_lari_premium":
             return jsonify({"error": "Acesso não autorizado."}), 403
 
-        # Lendo os dados textuais do multipart/form-data
+        # Captura os dados vindos via FormData (request.form)
         id_produto = request.form.get("id_produto")
         nome = request.form.get("nome")
         preco = request.form.get("preco")
         categoria = request.form.get("categoria")
-        visivel = request.form.get("visivel", "true").lower() == "true"
+        visivel_raw = request.form.get("visivel", "true")
+        foto_antiga = request.form.get("foto_antiga", "")
 
-        # Captura múltiplos arquivos sob a mesma chave 'foto'
-        arquivos_imagem = request.files.getlist("foto")
+        # Conversão segura do estado de visibilidade
+        if visivel_raw == "vendido":
+            visivel = "vendido"
+        else:
+            visivel = visivel_raw.lower() in ["true", "1", "yes"]
 
         if not id_produto or not nome or preco is None or not categoria:
             return jsonify({"error": "Preencha todos os campos obrigatórios."}), 400
 
-        urls_fotos = []
+        lista_urls_fotos = []
 
-        try:
-            # Faz o upload iterativo de cada arquivo para a infraestrutura da Vercel
-            if arquivos_imagem and any(f.filename != '' for f in arquivos_imagem):
-                for arquivo in arquivos_imagem:
-                    if arquivo.filename == "":
-                        continue
-                    
-                    if not VERCEL_BLOB_READ_WRITE_TOKEN:
-                        return jsonify({"error": "Token do Vercel Blob não configurado."}), 500
+        # Processamento das imagens enviadas
+        arquivos = request.files.getlist("foto")
+        if arquivos and arquivos[0].filename != "":
+            if not VERCEL_BLOB_READ_WRITE_TOKEN:
+                return jsonify({"error": "Token do Vercel Blob não configurado."}), 500
 
-                    # Evita colisões de nomes usando um sufixo pseudo-aleatório seguro
-                    nome_seguro = f"lari_{id_produto}_{os.urandom(2).hex()}_{arquivo.filename}"
-                    url_blob = f"https://blob.vercel-storage.com/{nome_seguro}"
+            try:
+                for arquivo in arquivos:
+                    nome_arquivo = f"{id_produto}_{arquivo.filename}"
+                    conteudo_arquivo = arquivo.read()
+                    url_blob = f"https://blob.vercel-storage.com/{nome_arquivo}"
 
                     headers_blob = {
                         "Authorization": f"Bearer {VERCEL_BLOB_READ_WRITE_TOKEN}",
                         "x-api-version": "1"
                     }
 
-                    conteudo_arquivo = arquivo.read()
                     resposta_vercel = requests.put(url_blob, headers=headers_blob, data=conteudo_arquivo)
 
                     if resposta_vercel.status_code in [200, 201]:
-                        dados_resposta = resposta_vercel.json()
-                        urls_fotos.append(dados_resposta.get("url"))
+                        lista_urls_fotos.append(resposta_vercel.json().get("url"))
                     else:
-                        return jsonify({"error": f"Vercel Blob rejeitou uma das imagens: {resposta_vercel.text}"}), 500
+                        return jsonify({"error": f"Vercel Blob rejeitou o upload: {resposta_vercel.text}"}), 500
 
-            # Une as URLs coletadas separando por uma vírgula exata
-            string_fotos_banco = ",".join(urls_fotos) if urls_fotos else ""
+                # Junta as novas fotos separadas por vírgula
+                string_fotos = ",".join(lista_urls_fotos)
+            except Exception as e:
+                return jsonify({"error": f"Falha no upload das imagens: {str(e)}"}), 500
+        else:
+            # Caso não tenha enviado novas fotos, mantém as que já existiam (Edição)
+            string_fotos = foto_antiga
 
+        if not string_fotos:
+            return jsonify({"error": "É necessário incluir ao menos uma imagem para o produto."}), 400
+
+        try:
             conn = obter_conexao()
             cursor = conn.cursor()
-            
-            # Se já houver fotos e o admin não enviou novas no POST (ex: edição), mantém as antigas ou atualiza
-            if not string_fotos_banco:
-                # Faz um UPSERT focado em não apagar as fotos caso esteja apenas editando texto
-                cursor.execute("""
-                    INSERT INTO produtos (id_produto, nome, preco, categoria, visivel)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (id_produto) 
-                    DO UPDATE SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
-                                  categoria = EXCLUDED.categoria, visivel = EXCLUDED.visivel;
-                """, (str(id_produto).strip(), str(nome).strip(), float(preco), str(categoria).strip(), bool(visivel)))
-            else:
-                # UPSERT completo atualizando a nova string de imagens separadas por vírgula
-                cursor.execute("""
-                    INSERT INTO produtos (id_produto, nome, preco, categoria, foto, visivel)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id_produto) 
-                    DO UPDATE SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
-                                  categoria = EXCLUDED.categoria, foto = EXCLUDED.foto, 
-                                  visivel = EXCLUDED.visivel;
-                """, (str(id_produto).strip(), str(nome).strip(), float(preco), str(categoria).strip(), string_fotos_banco, bool(visivel)))
+
+            # Ajuste dinâmico do tipo do campo 'visivel' (aceitando TEXT para 'vendido' ou BOOLEAN mapeado)
+            cursor.execute("""
+                INSERT INTO produtos (id_produto, nome, preco, categoria, foto, visivel)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id_produto) 
+                DO UPDATE SET nome = EXCLUDED.nome, preco = EXCLUDED.preco, 
+                              categoria = EXCLUDED.categoria, foto = EXCLUDED.foto, 
+                              visivel = EXCLUDED.visivel;
+            """, (str(id_produto).strip(), str(nome).strip(), float(preco), str(categoria).strip(), string_fotos,
+                  str(visivel)))
 
             cursor.close()
             conn.close()
-            return jsonify({"status": "success", "message": "Produto e imagens processados com sucesso."}), 200
+            return jsonify({"status": "success", "message": "Produto salvo com sucesso."}), 200
         except Exception as e:
-            return jsonify({"error": f"Erro ao processar persistência no banco: {str(e)}"}), 500
+            return jsonify({"error": f"Erro ao salvar no banco: {str(e)}"}), 500
 
-    # Retorna o catálogo
+    # Chamada GET: Retorna a lista completa do catálogo
     try:
         conn = obter_conexao()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM produtos;")
         lista_produtos = cursor.fetchall()
+
+        # Garante a conformidade do tipo booleano/texto ao ler do banco para evitar bugs na vitrine
+        for p in lista_produtos:
+            if p['visivel'] == 'True':
+                p['visivel'] = True
+            elif p['visivel'] == 'False':
+                p['visivel'] = False
+
         cursor.close()
         conn.close()
         return jsonify(lista_produtos), 200
