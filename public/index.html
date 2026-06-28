@@ -484,7 +484,6 @@ function enviarPedido() {
         return;
     }
 
-    // Mensagem enxuta contendo apenas o Produto, Nome e Endereço
     const mensagemWhatsApp = `Olá Lari, gostaria de fazer o seguinte pedido:\n\n` +
                              `*📦 PRODUTO(S):*\n${textoItens}\n` +
                              `*👤 CLIENTE:* ${nome}\n` +
@@ -493,9 +492,20 @@ function enviarPedido() {
     const numeroDestino = "5591982005830"; 
     const linkFinal = `https://api.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(mensagemWhatsApp)}`;
     
+    // 1. Abre o WhatsApp em nova aba
     window.open(linkFinal, '_blank');
-}
 
+    // 2. Limpa o carrinho de compras interno
+    cart = {};
+
+    // 3. Reseta os campos de texto do formulário
+    document.getElementById('client-name').value = '';
+    document.getElementById('client-address').value = '';
+
+    // 4. Atualiza a interface (fecha o modal e zera os contadores de itens)
+    atualizarEstadoCarrinho();
+    toggleCheckoutModal();
+}
         // ==========================================
         // FLUXO DE COMPORTAMENTO & SEGURANÇA ADMIN
         // ==========================================
