@@ -459,49 +459,42 @@
         // ==========================================
         // DISPARO E INTEGRACAO MILIMETRICA COM WHATSAPP
         // ==========================================
-        function enviarPedido() {
-            const nome = document.getElementById('client-name').value.trim();
-            const telefone = document.getElementById('client-phone').value.trim();
-            const endereco = document.getElementById('client-address').value.trim();
+function enviarPedido() {
+    const nome = document.getElementById('client-name').value.trim();
+    const endereco = document.getElementById('client-address').value.trim();
 
-            if (!nome || !telefone || !endereco) {
-                alert("Por favor, preencha todos os campos obrigatórios do checkout.");
-                return;
-            }
+    if (!nome || !endereco) {
+        alert("Por favor, preencha o seu nome e endereço de entrega.");
+        return;
+    }
 
-            let textoItens = '';
-            let totalAcumulado = 0;
-            let index = 1;
+    let textoItens = '';
+    let index = 1;
 
-            for (const id in cart) {
-                const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
-                if (prod) {
-                    const subtotal = parseFloat(prod.preco) * cart[id];
-                    totalAcumulado += subtotal;
-                    textoItens += `${index}. ${prod.nome} (x${cart[id]}) - ${subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n`;
-                    index++;
-                }
-            }
-
-            if (totalAcumulado === 0) {
-                alert("Nenhum item válido encontrado no carrinho.");
-                return;
-            }
-
-            const mensagemWhatsApp = `Olá Lari, gostaria de confirmar o seguinte pedido:\n\n` +
-                                     `*📦 PRODUTOS:*\n${textoItens}\n` +
-                                     `*💰 VALOR TOTAL:* ${totalAcumulado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n\n` +
-                                     `*👤 DADOS DO CLIENTE:*\n` +
-                                     `- Nome: ${nome}\n` +
-                                     `- WhatsApp: ${telefone}\n` +
-                                     `- Endereço: ${endereco}`;
-
-            // Configuração do número de destino (Número comercial da Lari)
-            const numeroDestino = "5591983057195"; 
-            const linkFinal = `https://api.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(mensagemWhatsApp)}`;
-            
-            window.open(linkFinal, '_blank');
+    for (const id in cart) {
+        const prod = datasetProducts.find(p => String(p.id_produto) === String(id));
+        if (prod) {
+            textoItens += `${index}. ${prod.nome} (x${cart[id]})\n`;
+            index++;
         }
+    }
+
+    if (!textoItens) {
+        alert("Nenhum item válido encontrado no carrinho.");
+        return;
+    }
+
+    // Mensagem enxuta contendo apenas o Produto, Nome e Endereço
+    const mensagemWhatsApp = `Olá Lari, gostaria de fazer o seguinte pedido:\n\n` +
+                             `*📦 PRODUTO(S):*\n${textoItens}\n` +
+                             `*👤 CLIENTE:* ${nome}\n` +
+                             `*📍 ENDEREÇO:* ${endereco}`;
+
+    const numeroDestino = "5591983057195"; 
+    const linkFinal = `https://api.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(mensagemWhatsApp)}`;
+    
+    window.open(linkFinal, '_blank');
+}
 
         // ==========================================
         // FLUXO DE COMPORTAMENTO & SEGURANÇA ADMIN
