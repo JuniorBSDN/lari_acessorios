@@ -614,49 +614,53 @@ function enviarPedido() {
         }
 
         function renderizarTabelaAdmin() {
-            const tbody = document.getElementById('admin-table-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
+    const tbody = document.getElementById('admin-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
 
-            datasetProducts.forEach(p => {
-                const statusAtual = p.visivel; // true, false ou 'vendido'
+    datasetProducts.forEach(p => {
+        const statusAtual = p.visivel; // true, false ou 'vendido'
 
-                tbody.innerHTML += `
-                    <tr class="border-b border-neutral-100 hover:bg-neutral-50/80 transition-colors">
-                        <td class="py-4 flex items-center gap-3 font-medium text-neutral-900">
-                            <img src="${p.foto}" class="w-10 h-10 object-cover rounded-lg border border-neutral-200">
-                            <span class="truncate max-w-[180px] font-semibold ${statusAtual === 'vendido' ? 'line-through text-neutral-400' : ''}">${p.nome}</span>
-                        </td>
-                        <td class="py-4 uppercase tracking-wider text-[10px] text-neutral-500">${p.categoria}</td>
-                        <td class="py-4 font-luxury font-bold">${Number(p.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                        <td class="py-4 text-center">
-                            ${statusAtual === 'vendido' ? `
-                                <span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md uppercase">Vendido</span>
-                            ` : `
-                                <button onclick="toggleVisibilidadeProduto('${p.id_produto}', ${statusAtual})" class="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
-                                    <span class="material-symbols-rounded text-base ${statusAtual ? 'text-emerald-600' : 'text-neutral-400'}">
-                                        ${statusAtual ? 'visibility' : 'visibility_off'}
-                                    </span>
-                                </button>
-                            `}
-                        </td>
-                        <td class="py-4 text-right space-x-2">
-                            ${statusAtual !== 'vendido' ? `
-                                <button onclick="marcarComoVendido('${p.id_produto}')" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded-md font-bold uppercase text-[10px] tracking-wider transition-all border border-emerald-200" title="Marcar como esgotado">
-                                    Vendido
-                                </button>
-                                <button onclick="prepararEdicaoCompleta('${p.id_produto}')" class="p-1 text-neutral-500 hover:text-black" title="Editar">
-                                    <span class="material-symbols-rounded text-base">edit</span>
-                                </button>
-                            ` : ''}
-                            <button onclick="excluirProdutoCompleto('${p.id_produto}')" class="p-1 text-red-500 hover:text-red-700" title="Excluir">
-                                <span class="material-symbols-rounded text-base">delete</span>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
+        // RESOLUÇÃO: Garante pegar apenas a primeira imagem para a miniatura da tabela
+        const listaFotos = p.foto ? p.foto.split(',') : ['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=600'];
+        const fotoCapa = listaFotos[0];
+
+        tbody.innerHTML += `
+            <tr class="border-b border-neutral-100 hover:bg-neutral-50/80 transition-colors">
+                <td class="py-4 flex items-center gap-3 font-medium text-neutral-900">
+                    <img src="${fotoCapa}" class="w-10 h-10 object-cover rounded-lg border border-neutral-200">
+                    <span class="truncate max-w-[180px] font-semibold ${statusAtual === 'vendido' ? 'line-through text-neutral-400' : ''}">${p.nome}</span>
+                </td>
+                <td class="py-4 uppercase tracking-wider text-[10px] text-neutral-500">${p.categoria}</td>
+                <td class="py-4 font-luxury font-bold">${Number(p.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                <td class="py-4 text-center">
+                    ${statusAtual === 'vendido' ? `
+                        <span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md uppercase">Vendido</span>
+                    ` : `
+                        <button onclick="toggleVisibilidadeProduto('${p.id_produto}', ${statusAtual})" class="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
+                            <span class="material-symbols-rounded text-base ${statusAtual ? 'text-emerald-600' : 'text-neutral-400'}">
+                                ${statusAtual ? 'visibility' : 'visibility_off'}
+                            </span>
+                        </button>
+                    `}
+                </td>
+                <td class="py-4 text-right space-x-2">
+                    ${statusAtual !== 'vendido' ? `
+                        <button onclick="marcarComoVendido('${p.id_produto}')" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded-md font-bold uppercase text-[10px] tracking-wider transition-all border border-emerald-200" title="Marcar como esgotado">
+                            Vendido
+                        </button>
+                        <button onclick="prepararEdicaoCompleta('${p.id_produto}')" class="p-1 text-neutral-500 hover:text-black" title="Editar">
+                            <span class="material-symbols-rounded text-base">edit</span>
+                        </button>
+                    ` : ''}
+                    <button onclick="excluirProdutoCompleto('${p.id_produto}')" class="p-1 text-red-500 hover:text-red-700" title="Excluir">
+                        <span class="material-symbols-rounded text-base">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
 
         // ==========================================
         // ACOES INTEGRADAS DO BACKEND (ALTERAR/EXCLUIR/VENDIDO)
@@ -719,23 +723,49 @@ async function toggleVisibilidadeProduto(id, estadoAtual) {
 
 
         function prepararEdicaoCompleta(id) {
-            const p = datasetProducts.find(prod => prod.id_produto === id);
-            if (!p) return;
+    const p = datasetProducts.find(prod => prod.id_produto === id);
+    if (!p) return;
 
-            editingProduct = p;
-            document.getElementById('prod-id').value = p.id_produto;
-            document.getElementById('prod-nome').value = p.nome;
-            document.getElementById('prod-preco').value = p.preco;
-            document.getElementById('prod-categoria').value = p.categoria;
+    editingProduct = p;
+    document.getElementById('prod-id').value = p.id_produto;
+    document.getElementById('prod-nome').value = p.nome;
+    document.getElementById('prod-preco').value = p.preco;
+    document.getElementById('prod-categoria').value = p.categoria;
 
-            document.getElementById('upload-preview-img').src = p.foto;
-            document.getElementById('upload-placeholder-view').classList.add('hidden');
-            document.getElementById('upload-preview-container').classList.remove('hidden');
+    const containerPreview = document.getElementById('upload-preview-container');
+    const placeholder = document.getElementById('upload-placeholder-view');
 
-            document.getElementById('form-title').innerText = "Alterar Acessório";
-            document.getElementById('btn-cancelar').classList.remove('hidden');
-        }
+    // Limpa previews anteriores
+    containerPreview.innerHTML = '';
 
+    // Separa as fotos guardadas por vírgula
+    const listaFotos = p.foto ? p.foto.split(',') : [];
+
+    if (listaFotos.length > 0) {
+        const wrapper = document.createElement('div');
+        wrapper.className = "flex flex-wrap gap-2 justify-center";
+
+        listaFotos.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url.trim();
+            img.className = "w-14 h-14 object-cover rounded-md border border-neutral-200 shadow-sm";
+            wrapper.appendChild(img);
+        });
+
+        const label = document.createElement('span');
+        label.className = "text-[9px] text-neutral-400 uppercase bg-neutral-200/60 px-2 py-0.5 rounded-full font-bold block text-center mt-1";
+        label.innerText = `${listaFotos.length} Imagens Salvas no Acervo`;
+
+        containerPreview.appendChild(wrapper);
+        containerPreview.appendChild(label);
+
+        placeholder.classList.add('hidden');
+        containerPreview.classList.remove('hidden');
+    }
+
+    document.getElementById('form-title').innerText = "Alterar Acessório";
+    document.getElementById('btn-cancelar').classList.remove('hidden');
+}
 
        // ==========================================
         // FLUXO DE COMPORTAMENTO & SALVAMENTO MULTI-IMAGEM ADMIN
