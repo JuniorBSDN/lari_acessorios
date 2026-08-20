@@ -13,7 +13,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            gap: 40px;
+            gap: 30px;
             box-sizing: border-box;
         }
 
@@ -23,6 +23,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             width: 300px;
+            box-sizing: border-box;
         }
         .controles h2 {
             margin-top: 0;
@@ -103,22 +104,23 @@
             display: none;
         }
 
-        /* AJUSTE RESPONSIVO PARA CELULARES */
+        /* RESPONSIVIDADE CORRETA PARA CELULARES */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
                 height: auto;
-                padding: 20px 10px;
-                gap: 20px;
+                padding: 15px;
+                justify-content: flex-start;
             }
             .controles {
                 width: 100%;
-                max-width: 320px;
+                max-width: 100%;
             }
             .preview-container-tela {
                 width: 100%;
                 display: flex;
                 justify-content: center;
+                margin-top: 10px;
             }
         }
 
@@ -190,7 +192,7 @@
     <div class="preview-container-tela">
         <div class="etiqueta-container" id="etiqueta">
             <div class="topo-etiqueta">
-                <img src="https://cdn-icons-png.flaticon.com/512/1170/1170577.png" alt="Logo" class="logo-etiqueta" id="displayLogo">
+                <img src="https://i.imgur.com/9WCU4ia.png" alt="Logo" class="logo-etiqueta" id="displayLogo">
                 <div class="valor-etiqueta">R$ <span id="displayValor">99,90</span></div>
             </div>
             <div class="nome-produto" id="displayNome">
@@ -211,7 +213,7 @@
         const displayNome = document.getElementById('displayNome');
 
         inputUrlLogo.addEventListener('input', (e) => {
-            displayLogo.src = e.target.value || 'https://via.placeholder.com/60?text=Logo';
+            displayLogo.src = e.target.value || 'https://i.imgur.com/9WCU4ia.png';
         });
 
         inputValor.addEventListener('input', (e) => {
