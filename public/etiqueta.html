@@ -11,9 +11,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             gap: 40px;
+            box-sizing: border-box;
         }
 
         .controles {
@@ -100,6 +101,25 @@
 
         .print-grid {
             display: none;
+        }
+
+        /* AJUSTE RESPONSIVO PARA CELULARES */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                padding: 20px 10px;
+                gap: 20px;
+            }
+            .controles {
+                width: 100%;
+                max-width: 320px;
+            }
+            .preview-container-tela {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+            }
         }
 
         @media print {
