@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Etiquetas</title>
+    <title>Gerador de Etiquetas Horizontais</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,10 +13,9 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            gap: 50px;
+            gap: 40px;
         }
 
-        /* Estilos do Painel de Controle (Formulário) */
         .controles {
             background: #fff;
             padding: 20px;
@@ -43,88 +42,155 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+        .btn-imprimir {
+            width: 100%;
+            padding: 10px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin-top: 15px;
+            cursor: pointer;
+        }
 
-        /* Estilos da Etiqueta */
+        /* ETIQUETA HORIZONTAL NA TELA (Visualização) */
         .etiqueta-container {
             background: #fff;
-            width: 320px;
-            padding: 20px;
+            width: 280px;
+            height: 110px;
+            padding: 12px 15px;
             border: 2px dashed #333;
-            border-radius: 10px;
+            border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
-        
+
         .topo-etiqueta {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            border-bottom: 1.5px solid #eee;
+            padding-bottom: 4px;
         }
 
         .logo-etiqueta {
-            max-width: 60px;
-            max-height: 60px;
+            max-width: 50px;
+            max-height: 50px;
             object-fit: contain;
         }
 
         .valor-etiqueta {
-            font-size: 2.2rem; /* Valor maior */
+            font-size: 2rem;
             font-weight: bold;
-            color: #e53935;
+            color: #222222;
         }
 
         .nome-produto {
-            font-size: 1.3rem; /* Nome do produto embaixo */
+            font-size: 1.1rem;
             text-align: center;
-            color: #333;
+            color: #000;
             font-weight: bold;
             text-transform: uppercase;
+        }
+
+        .print-grid {
+            display: none;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                display: block;
+                height: auto;
+            }
+            .controles, .preview-container-tela {
+                display: none !important;
+            }
+            .print-grid {
+                display: grid;
+                width: 190mm; /* Largura útil da folha A4 Retrato */
+                gap: 2mm;
+                margin: 0 auto;
+                justify-content: center;
+            }
+            /* RETÂNGULO DEFINIDO E FIXO NA IMPRESSÃO */
+            .etiqueta-container {
+                width: 40mm !important;   /* Largura fixa do retângulo */
+                height: 20mm !important;  /* Altura fixa do retângulo (formato deitado garantido) */
+                padding: 2mm 3mm !important;
+                border: 0.5px dashed #666;
+                border-radius: 4px;
+                box-shadow: none;
+            }
+            .topo-etiqueta {
+                padding-bottom: 1mm;
+                border-bottom: 1px solid #ddd;
+            }
+            .logo-etiqueta {
+                max-width: 10mm;
+                max-height: 10mm;
+            }
+            .valor-etiqueta {
+                font-size: 14pt !important;
+            }
+            .nome-produto {
+                font-size: 10pt !important;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- Formulário para digitar os dados -->
-    <div class="controles">
-        <h2>Criar Etiqueta</h2>
-        
+    <div class="controles preview-container-tela">
+        <h2>Gerador de Etiquetas</h2>
+
         <label for="inputUrlLogo">URL do Logo:</label>
-        <input type="text" id="inputUrlLogo" placeholder="Cole o link da imagem aqui..." value="https://cdn-icons-png.flaticon.com/512/1170/1170577.png">
-        
+        <input type="text" id="inputUrlLogo" value="https://i.imgur.com/9WCU4ia.png">
+
         <label for="inputValor">Valor (R$):</label>
-        <input type="text" id="inputValor" placeholder="Ex: 99,90" value="99,90">
-        
+        <input type="text" id="inputValor" value="99,90">
+
         <label for="inputNome">Nome do Produto:</label>
-        <input type="text" id="inputNome" placeholder="Ex: Camiseta Básica" value="Camiseta Básica">
+        <input type="text" id="inputNome" value="Camiseta Básica">
+
+        <label for="inputColunas">Número de Colunas:</label>
+        <input type="number" id="inputColunas" value="4" min="1" max="10">
+
+        <label for="inputCopias">Quantidade de Cópias:</label>
+        <input type="number" id="inputCopias" value="24" min="1">
+
+        <button class="btn-imprimir" onclick="imprimirEtiquetas()">Imprimir</button>
     </div>
 
-    <!-- Etiqueta gerada visualmente -->
-    <div class="etiqueta-container" id="etiqueta">
-        <div class="topo-etiqueta">
-            <img src="https://cdn-icons-png.flaticon.com/512/1170/1170577.png" alt="Logo" class="logo-etiqueta" id="displayLogo">
-            <div class="valor-etiqueta">R$ <span id="displayValor">99,90</span></div>
-        </div>
-        <div class="nome-produto" id="displayNome">
-            CAMISETA BÁSICA
+    <div class="preview-container-tela">
+        <div class="etiqueta-container" id="etiqueta">
+            <div class="topo-etiqueta">
+                <img src="https://cdn-icons-png.flaticon.com/512/1170/1170577.png" alt="Logo" class="logo-etiqueta" id="displayLogo">
+                <div class="valor-etiqueta">R$ <span id="displayValor">99,90</span></div>
+            </div>
+            <div class="nome-produto" id="displayNome">
+                CAMISETA BÁSICA
+            </div>
         </div>
     </div>
+
+    <div class="print-grid" id="printGrid"></div>
 
     <script>
-        // Capturando os elementos de entrada
         const inputUrlLogo = document.getElementById('inputUrlLogo');
         const inputValor = document.getElementById('inputValor');
         const inputNome = document.getElementById('inputNome');
 
-        // Capturando os elementos de exibição na etiqueta
         const displayLogo = document.getElementById('displayLogo');
         const displayValor = document.getElementById('displayValor');
         const displayNome = document.getElementById('displayNome');
 
-        // Função para atualizar os dados em tempo real
         inputUrlLogo.addEventListener('input', (e) => {
-            // Se o campo estiver vazio, usa um logo padrão transparente ou genérico
             displayLogo.src = e.target.value || 'https://via.placeholder.com/60?text=Logo';
         });
 
@@ -135,6 +201,22 @@
         inputNome.addEventListener('input', (e) => {
             displayNome.textContent = e.target.value || 'NOME DO PRODUTO';
         });
+
+        function imprimirEtiquetas() {
+            const colunas = document.getElementById('inputColunas').value || 4;
+            const copias = document.getElementById('inputCopias').value || 24;
+            const printGrid = document.getElementById('printGrid');
+            const etiquetaHTML = document.getElementById('etiqueta').outerHTML;
+
+            printGrid.style.gridTemplateColumns = `repeat(${colunas}, max-content)`;
+
+            printGrid.innerHTML = '';
+            for (let i = 0; i < copias; i++) {
+                printGrid.innerHTML += etiquetaHTML;
+            }
+
+            window.print();
+        }
     </script>
 </body>
 </html>
