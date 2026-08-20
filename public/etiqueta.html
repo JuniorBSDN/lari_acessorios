@@ -13,7 +13,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            gap: 30px;
+            gap: 40px;
             box-sizing: border-box;
         }
 
@@ -46,7 +46,7 @@
         }
         .btn-imprimir {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background-color: #27ae60;
             color: white;
             border: none;
@@ -55,6 +55,12 @@
             font-weight: bold;
             margin-top: 15px;
             cursor: pointer;
+        }
+
+        .preview-container-tela {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         /* ETIQUETA HORIZONTAL NA TELA (Visualização) */
@@ -104,23 +110,21 @@
             display: none;
         }
 
-        /* RESPONSIVIDADE CORRETA PARA CELULARES */
+        /* RESPONSIVIDADE REAL PARA CELULARES */
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
                 height: auto;
                 padding: 15px;
                 justify-content: flex-start;
+                align-items: stretch;
             }
             .controles {
                 width: 100%;
-                max-width: 100%;
             }
             .preview-container-tela {
                 width: 100%;
-                display: flex;
-                justify-content: center;
-                margin-top: 10px;
+                margin-top: 15px;
             }
         }
 
@@ -168,7 +172,8 @@
 </head>
 <body>
 
-    <div class="controles preview-container-tela">
+    <!-- BLOCO DE CONTROLES SEPARADO -->
+    <div class="controles">
         <h2>Gerador de Etiquetas</h2>
 
         <label for="inputUrlLogo">URL do Logo:</label>
@@ -189,6 +194,7 @@
         <button class="btn-imprimir" onclick="imprimirEtiquetas()">Imprimir</button>
     </div>
 
+    <!-- BLOCO DE VISUALIZAÇÃO SEPARADO -->
     <div class="preview-container-tela">
         <div class="etiqueta-container" id="etiqueta">
             <div class="topo-etiqueta">
