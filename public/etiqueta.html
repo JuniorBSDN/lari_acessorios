@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Etiquetas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            gap: 50px;
+        }
+
+        /* Estilos do Painel de Controle (Formulário) */
+        .controles {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 300px;
+        }
+        .controles h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #333;
+        }
+        .controles label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .controles input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        /* Estilos da Etiqueta */
+        .etiqueta-container {
+            background: #fff;
+            width: 320px;
+            padding: 20px;
+            border: 2px dashed #333;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        
+        .topo-etiqueta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .logo-etiqueta {
+            max-width: 60px;
+            max-height: 60px;
+            object-fit: contain;
+        }
+
+        .valor-etiqueta {
+            font-size: 2.2rem; /* Valor maior */
+            font-weight: bold;
+            color: #e53935;
+        }
+
+        .nome-produto {
+            font-size: 1.3rem; /* Nome do produto embaixo */
+            text-align: center;
+            color: #333;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Formulário para digitar os dados -->
+    <div class="controles">
+        <h2>Criar Etiqueta</h2>
+        
+        <label for="inputUrlLogo">URL do Logo:</label>
+        <input type="text" id="inputUrlLogo" placeholder="Cole o link da imagem aqui..." value="https://cdn-icons-png.flaticon.com/512/1170/1170577.png">
+        
+        <label for="inputValor">Valor (R$):</label>
+        <input type="text" id="inputValor" placeholder="Ex: 99,90" value="99,90">
+        
+        <label for="inputNome">Nome do Produto:</label>
+        <input type="text" id="inputNome" placeholder="Ex: Camiseta Básica" value="Camiseta Básica">
+    </div>
+
+    <!-- Etiqueta gerada visualmente -->
+    <div class="etiqueta-container" id="etiqueta">
+        <div class="topo-etiqueta">
+            <img src="https://cdn-icons-png.flaticon.com/512/1170/1170577.png" alt="Logo" class="logo-etiqueta" id="displayLogo">
+            <div class="valor-etiqueta">R$ <span id="displayValor">99,90</span></div>
+        </div>
+        <div class="nome-produto" id="displayNome">
+            CAMISETA BÁSICA
+        </div>
+    </div>
+
+    <script>
+        // Capturando os elementos de entrada
+        const inputUrlLogo = document.getElementById('inputUrlLogo');
+        const inputValor = document.getElementById('inputValor');
+        const inputNome = document.getElementById('inputNome');
+
+        // Capturando os elementos de exibição na etiqueta
+        const displayLogo = document.getElementById('displayLogo');
+        const displayValor = document.getElementById('displayValor');
+        const displayNome = document.getElementById('displayNome');
+
+        // Função para atualizar os dados em tempo real
+        inputUrlLogo.addEventListener('input', (e) => {
+            // Se o campo estiver vazio, usa um logo padrão transparente ou genérico
+            displayLogo.src = e.target.value || 'https://via.placeholder.com/60?text=Logo';
+        });
+
+        inputValor.addEventListener('input', (e) => {
+            displayValor.textContent = e.target.value || '0,00';
+        });
+
+        inputNome.addEventListener('input', (e) => {
+            displayNome.textContent = e.target.value || 'NOME DO PRODUTO';
+        });
+    </script>
+</body>
+</html>
